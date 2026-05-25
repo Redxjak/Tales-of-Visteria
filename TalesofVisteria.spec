@@ -8,6 +8,7 @@ a = Analysis(
     datas=[
         ('monster_stats.json', '.'),
         ('game_over_party.png', '.'),
+        ('translations', 'translations'),
     ],
     hiddenimports=[],
     hookspath=[],

@@ -26,6 +26,12 @@ py game.py
 
 On Windows, you can also double-click `Tales of Visteria.pyw` to launch the GUI without a console window.
 
+## Text and translations
+
+Story and UI text are loaded from `translations/en.json`.
+
+For another language, copy `translations/en.json` to a new file such as `translations/es.json`, keep the same keys, and translate only the values. The game currently loads English, but this structure is ready for a future online version to choose a language file based on the page link.
+
 ## Current chapter
 
 The playable opening includes:
@@ -42,4 +48,5 @@ The playable opening includes:
 - City or barracks route, feeding into the residential area
 - Bridge, warehouse ritual, and production area finale
 - Basic save/load using `savegame.json`
+- English story/UI text loaded from `translations/en.json`, ready for additional language files
 - Monster references loaded from `monster_stats.json`, generated from the D&D monster stats spreadsheet

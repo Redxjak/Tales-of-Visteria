@@ -1,0 +1,667 @@
+:: StoryTitle
+Tales of Visteria
+
+:: StoryData
+{
+  "ifid": "a8b6c9e2-5b0e-4f93-a96c-7a1e5b175e1a",
+  "format": "Harlowe",
+  "format-version": "3.3.9",
+  "start": "Start"
+}
+
+:: Start
+Welcome to Tales of Visteria.
+
+A story DM'd by Jubikino
+An adaption made by Redxjak
+
+Content warning: vulgar language and dark fantasy themes.
+
+[[New Game->Character Select]]
+[[Load Game / Current Desktop Save->Twine Note - Save System]]
+
+:: Character Select
+Choose your character.
+
+* Cletus the Goliath Barbarian
+* Ren the Elven Ranger
+* Cal the Human Warlock
+* Kili the Dwarf Fighter
+* Jon the DM
+
+[[Cletus->Set Cletus]]
+[[Ren->Set Ren]]
+[[Cal->Set Cal]]
+[[Kili->Set Kili]]
+[[Jon the DM->Set Jon]]
+[[Back->Start]]
+
+:: Set Cletus
+(set: $class to "warrior")
+(set: $name to "Cletus")
+(set: $title to "Barbarian")
+(set: $forestAttempts to 0)
+(set: $hasDoll to false)
+(set: $girlHint to "")
+(set: $hasMap to false)
+
+[[Begin->Caravan]]
+
+:: Set Ren
+(set: $class to "ranger")
+(set: $name to "Ren")
+(set: $title to "Ranger")
+(set: $forestAttempts to 0)
+(set: $hasDoll to false)
+(set: $girlHint to "")
+(set: $hasMap to false)
+
+[[Begin->Caravan]]
+
+:: Set Cal
+(set: $class to "scholar")
+(set: $name to "Cal")
+(set: $title to "Warlock")
+(set: $forestAttempts to 0)
+(set: $hasDoll to false)
+(set: $girlHint to "")
+(set: $hasMap to false)
+
+[[Begin->Caravan]]
+
+:: Set Kili
+(set: $class to "dwarf")
+(set: $name to "Kili")
+(set: $title to "Fighter")
+(set: $forestAttempts to 0)
+(set: $hasDoll to false)
+(set: $girlHint to "")
+(set: $hasMap to false)
+
+[[Begin->Caravan]]
+
+:: Set Jon
+(set: $class to "dm")
+(set: $name to "Jon")
+(set: $title to "DM")
+(set: $forestAttempts to 0)
+(set: $hasDoll to false)
+(set: $girlHint to "")
+(set: $hasMap to false)
+
+[[Begin->DM Intro]]
+
+:: Twine Note - Save System
+The desktop game has New Game, Load Game, Save, stats, inventory, combat, monster references, and translations.
+
+This Twine file is the cleaned story map for planning and branch review, so it does not load the desktop save file.
+
+[[Back->Start]]
+
+:: Caravan
+Your caravan crawls through the dusk road to Visteria.
+Then horns split the air. Goblins rush from the brush. Orcs break the line.
+You fight beside the wagons until the guards are scattered and the road is lost.
+
+Do you stand and fight, or run for the ravine?
+
+[[Fight->Caravan Fight]]
+[[Run->Caravan Run]]
+
+:: Caravan Fight
+You cut down two attackers, but more pour in from the smoke.
+
+The caravan is overrun. Escape is the only thing left.
+
+[[Escape->Escape Signpost]]
+
+:: Caravan Run
+You dive through the burning canvas and sprint toward the ravine.
+
+The caravan is overrun. Escape is the only thing left.
+
+[[Escape->Escape Signpost]]
+
+:: Escape Signpost
+You are still being chased.
+Ahead stands a faded signpost, its words scraped away by time.
+
+One path leads into a forest with gray miasma. The other drops into a cave.
+
+[[Forest->Forest Loop]]
+[[Cave->Cave Entrance]]
+
+:: Forest Loop
+(set: $forestAttempts to $forestAttempts + 1)
+
+The forest breathes a gray miasma.
+Your thoughts loosen. Branches bend into familiar shapes.
+After hours, you stagger back to the same blood-stained road, still being chased, as if no time passed.
+
+(if: $forestAttempts > 5)[
+  [[Your mind breaks->Game Over - Forest Mind Break]]
+]
+(else:)[
+  (if: $forestAttempts >= 2)[The forest will not let you pass. The cave waits like a mouth.]
+
+  [[Try the signpost again->Escape Signpost]]
+]
+
+:: Cave Entrance
+You slip into the cave as shouts rise behind you.
+
+[[Go deeper->Cave]]
+
+:: Cave
+The cave descends into an ancient buried city. Everything here is dead.
+Behind you, goblin voices echo closer.
+
+Do you fight them, or go deeper?
+
+[[Fight->Cave Fight]]
+[[Go Deeper->Ghost Girl]]
+
+:: Cave Fight
+This is a desktop-game combat/check scene.
+
+Success: You hold the narrow passage and drive them back.
+Failure: They overwhelm your guard before fleeing from something farther below.
+
+[[Continue deeper->Ghost Girl]]
+[[If you die->Game Over - Combat]]
+
+:: Ghost Girl
+Little girl with white face and black hair standing in the corridor.
+
+What do you do?
+
+[[Persuade->Ghost Persuasion]]
+[[Fight->Ghost Fight]]
+[[Sneak Past->Ghost Sneak Past]]
+
+:: Ghost Persuasion
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 7)[
+  Drops doll and disappears.
+
+  [[Doll choice->Doll Choice]]
+]
+(else-if: $roll <= 15)[
+  Help - points to barracks and says there are pointy sticks. Points to merchant district and says there is a "glowing ball".
+
+  When you look back, she is gone and a doll is in her place.
+
+  (set: $girlHint to "barracks_glowing_ball")
+
+  [[Doll choice->Doll Choice]]
+]
+(else:)[
+  You tell her you are being chased and ask for her help. She disappears and drops a doll. You hear terrified screams of orcs and goblins.
+
+  You carefully, but swiftly, walk deeper, unwilling to turn back to the horrors you can only imagine going on to the monsters behind you.
+
+  [[Road sign->Districts]]
+]
+
+:: Ghost Fight
+(if: $class is "warrior")[
+  You let out a mighty war cry, raise your axe and run at the apparition, with the knowledge that nothing can stop you.
+
+  You aimed for the head and swung through it like an axe through air, and keep going. You pass completely through her and fall to the ground. Yup you were right, nothing could stop you.
+
+  She looks at you and giggles "Play?"
+
+  [[The black pits open->Game Over - Ghost]]
+]
+(else-if: $class is "scholar")[
+  You feel for the swirling core of potential in your soul and feel the power there. With an extension of your will, you manifest it in blast of power and hurl it at the unknown spectre in front of you.
+
+  She lets out an ear piercing screen that disorients you. You feel blood coming out of your ears and have the worst headache of your life.
+
+  Black miasma like smoke pours from her and she disappears into it. Before long that disappears as well.
+
+  [[Doll choice->Doll Choice]]
+]
+(else-if: $class is "ranger")[
+  You knock and arrow and pull back on the bow string. You aim carefully at the little girl with the precision of a hunter and release the string.
+
+  Your arrow passes through her as if nothing was there. Your keen eyes notice a slight distortion where the arrow flew through.
+
+  She looks at you and giggles "Play?"
+
+  [[The black pits open->Game Over - Ghost]]
+]
+(else-if: $class is "dwarf")[
+  Damn, is that my goth baddie? I'm gonna give her a kiss.
+
+  You run as fast as your short legs can take you to your 17.50.
+
+  [[The black pits open->Game Over - Ghost]]
+]
+
+:: Ghost Sneak Past
+You try to slip past her without drawing attention.
+
+She turns her head and watches you, even through walls. Once you get to a point past her, she instantly appears in front of you.
+
+Black miasma like smoke pours from her and she disappears into it. Before long that disappears as well.
+
+[[Doll choice->Doll Choice]]
+
+:: Doll Choice
+You hear the monsters getting closer. Do you grab the doll, or just run?
+
+[[Grab the Doll->Grab Doll]]
+[[Leave the doll and run->Leave Doll]]
+
+:: Grab Doll
+(set: $hasDoll to true)
+You quickly grab the doll and start running.
+
+[[Road sign->Districts]]
+
+:: Leave Doll
+You turn away from the doll and run. You feel a shiver and sneak a quick glance back. The doll is gone.
+
+[[Road sign->Districts]]
+
+:: Districts
+You get to the end of the road.
+The sign points left to Barracks and right to the Merchant district.
+
+Which route do you take?
+
+[[Barracks->Barracks]]
+[[Merchant District->Merchant District]]
+
+:: Barracks
+You turn left toward the barracks.
+
+(if: $girlHint is "barracks_glowing_ball")[Pointy sticks. The girl's whisper lingers in your head.]
+
+You make your way into the barracks. In is shaped like a colosseum. Outer ring holds an armory and living quarters, with a fighting pit in the center right. There are three orcs in the inter ring.
+
+[[Sneak to Armory->Barracks Armory]]
+[[Head to Center Ring->Barracks Combat]]
+[[Sneak to Quarters->Barracks Quarters]]
+
+:: Barracks Armory
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[
+  You tripped over a left over shield. Prepare to fight.
+
+  [[Fight the orcs->Barracks Combat]]
+]
+(else:)[
+  You sucessfully made it to the armory.
+
+  [[Search for something useful->Search Loot]]
+]
+
+:: Barracks Quarters
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[
+  When you open the door to the first living area, you find a goblin in a dress. He screams and alerts the orcs.
+
+  [[Fight the orcs->Barracks Combat]]
+]
+(else:)[
+  You open the door and find it empty. You search around for anything useful.
+
+  [[Search for something useful->Search Loot]]
+]
+
+:: Barracks Combat
+The orcs immediately notice you and prepare to fight. Good luck.
+
+Desktop combat: three orcs.
+
+[[If you win, loot bodies->Found Map]]
+[[If you lose->Game Over - Combat]]
+
+:: Merchant District
+You turn right toward the city district.
+
+(if: $girlHint is "barracks_glowing_ball")[Glowing ball. The girl's whisper follows you between the old market stalls.]
+
+You enter the city gates and find your self in a market area, with some buildings that look like homes down further.
+
+There is a band of 5 goblins and 2 orcs roaming around.
+
+[[Sneak Into Shop->Merchant Shop]]
+[[Assault Monsters->Merchant Combat]]
+[[Sneak Past->Merchant Sneak Past]]
+
+:: Merchant Shop
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[
+  You reach for the door handle and push it open. A loud squeek echos out to the city.
+
+  [[Fight the monsters->Merchant Combat]]
+]
+(else:)[
+  You reach for the door handle and slowly push it open. It looks like the owner kept it well oiled. Nice.
+
+  [[Search the shop->Search Loot]]
+]
+
+:: Merchant Sneak Past
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 16)[
+  You hear a war horn sound. You have been spotted.
+
+  [[Fight the monsters->Merchant Combat]]
+]
+(else:)[
+  You successfully avoid their gaze and sneak past them.
+
+  [[Residential District->Residential]]
+]
+
+:: Merchant Combat
+You are immediately seen. Prepare for a fight.
+
+Desktop combat: five goblins and two orcs.
+
+[[If you win, loot bodies->Found Map]]
+[[If you lose->Game Over - Combat]]
+
+:: Search Loot
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 7)[
+  Everything has been picked clean, there is nothing here.
+
+  [[Move on->Residential]]
+]
+(else-if: $roll <= 14)[
+  A health potion.
+
+  [[Move on->Residential]]
+]
+(else:)[
+  [[You find a map->Found Map]]
+]
+
+:: Found Map
+(set: $hasMap to true)
+Map showing the direct route to the throne room, with instructions on how to avoid the traps.
+
+The safe bridge path is: LEFT, UP, RIGHT, DOWN.
+Remember it or write it down. The map is too brittle to keep checking later.
+
+[[Move on->Residential]]
+
+:: Residential
+Both routes narrow into the residential quarter.
+
+Desktop game currently has a simple residential choice here. Updated Visio notes add several house paths, mimics, keys, a chest, and a magistone orb. This passage is a placeholder for that next expansion.
+
+[[Open Chests->Residential Chests]]
+[[Study Rooms->Residential Study]]
+[[Proceed to Bridge->Bridge]]
+
+:: Residential Chests
+The chest opens its own teeth. Mimic.
+
+[[If you survive->Bridge]]
+[[If you die->Game Over - Mimic]]
+
+:: Residential Study
+You learn that the buried city was sealed after an eldritch ritual failed.
+
+[[Proceed to Bridge->Bridge]]
+
+:: Bridge
+The bridge crosses a black canal beneath the city.
+On the far side, a warehouse burns with violet light.
+Behind the walls, old city defenses grind awake.
+
+(if: $hasMap)[
+  The old map showed a safe route through the bridge traps, but the parchment has crumbled from being handled too much.
+  You will need to follow the directions from memory.
+
+  [[Navigate Bridge->Bridge Step 1]]
+]
+(else:)[
+  Without a map or memorized directions, it may be impossible to safely cross.
+
+  [[Cross anyway->Warehouse]]
+  [[Prepare->Bridge Prepare]]
+]
+
+:: Bridge Prepare
+You bind wounds, steady your hands, and use what supplies you can spare.
+
+[[Return to the bridge->Bridge]]
+
+:: Bridge Step 1
+Choose the first direction.
+
+[[Left->Bridge Step 2]]
+[[Right->Game Over - Bridge Trap]]
+[[Up->Game Over - Bridge Trap]]
+[[Down->Game Over - Bridge Trap]]
+
+:: Bridge Step 2
+The bridge stays quiet.
+
+Choose the second direction.
+
+[[Up->Bridge Step 3]]
+[[Left->Game Over - Bridge Trap]]
+[[Right->Game Over - Bridge Trap]]
+[[Down->Game Over - Bridge Trap]]
+
+:: Bridge Step 3
+The bridge stays quiet.
+
+Choose the third direction.
+
+[[Right->Bridge Step 4]]
+[[Left->Game Over - Bridge Trap]]
+[[Up->Game Over - Bridge Trap]]
+[[Down->Game Over - Bridge Trap]]
+
+:: Bridge Step 4
+The bridge stays quiet.
+
+Choose the fourth direction.
+
+[[Down->Warehouse]]
+[[Left->Game Over - Bridge Trap]]
+[[Right->Game Over - Bridge Trap]]
+[[Up->Game Over - Bridge Trap]]
+
+:: Warehouse
+Inside the warehouse, robed figures circle an eldritch ritual.
+
+(if: $hasDoll)[The cracked doll drops from your pack. The air turns cold. The pale girl appears among them, and the ritual falters.]
+(else:)[The ritual notices you. That is the only way to describe it.]
+
+[[Survive the warehouse battle->Production]]
+[[Fall in the ritual->Game Over - Warehouse]]
+
+:: Production
+The production area is a maze of chains, hooks, furnaces, and dead machines.
+One wrong turn will end you.
+
+Choose the path sequence.
+
+[[Left->Production Left]]
+[[Center->Game Over - Production]]
+[[Right->Game Over - Production]]
+
+:: Production Left
+Choose the second path.
+
+[[Right->Production Left Right]]
+[[Left->Game Over - Production]]
+[[Center->Game Over - Production]]
+
+:: Production Left Right
+Choose the third path.
+
+[[Center->Ending]]
+[[Left->Game Over - Production]]
+[[Right->Game Over - Production]]
+
+:: Ending
+You find the hidden maintenance lift and ride it toward moonlight.
+
+Chapter complete. You have escaped the buried city of Visteria.
+
+You have completed this playable chapter of Tales of Visteria.
+
+[[Restart->Start]]
+
+:: Game Over - Hydra
+The hydra was not an encounter. It was a weather event with teeth.
+The story ends before anyone can object.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Forest Mind Break
+The forest repeats one time too many.
+Your thoughts unravel into gray miasma, and you wander beneath the same trees for the rest of your life.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Ghost
+The pale girl's eyes become empty black pits.
+You lose your sense of self, then the dark takes the rest.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Combat
+The fight turns against you.
+Steel, teeth, and panic close in until Visteria falls silent again.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Warehouse
+The warehouse ritual notices you.
+Whatever waits inside that violet light accepts your life as payment.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Bridge Trap
+The bridge defenses wake beneath your feet.
+Without the right path, the old city claims you as another warning.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Production
+The production tunnels shift, bite, and open beneath you.
+The buried city keeps its secrets.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: Game Over - Mimic
+The chest was not treasure. It was hunger pretending to be useful.
+Your adventure ends between wooden teeth.
+
+Thanks for playing.
+This was made in memory of a DnD session with friends.
+
+[[Restart->Start]]
+
+:: DM Intro
+You look down from above at the puny mortals of Visteria.
+Their caravan crawls along the road, quiet and terribly untested.
+
+What trouble do you send?
+
+[[Orcs and Goblins->DM Orcs]]
+[[Hydra->Game Over - Hydra]]
+
+:: DM Orcs
+Wow. They ran like little bitches.
+Fine. I guess that means I get to keep playing with their lives.
+
+Do I let them go to the Forest of life, and power, or the cave of darkness and despair?
+
+[[Caves->DM Ghost]]
+[[Forest->DM Ghost]]
+
+:: DM Ghost
+Alright what are these fuck tards, sorry uh "heroes" going to do now?
+Who do I want to creepily watch?
+
+[[Cletus->DM Watch Cletus]]
+[[Cal->DM Watch Cal]]
+[[Ren->DM Watch Ren]]
+[[Kili->DM Watch Kili]]
+
+:: DM Watch Cletus
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[Cletus doesn't think and just rushes to the ghost girl and tries to swing his axe and falls on his ass. Hahahaha I can't believe he did that]
+(else:)[Cletus is actually good with kids and convinced her to go "play" with the orcs coming in. Oh boy, I did not expect that]
+
+[[The end so far->Chapter Complete]]
+
+:: DM Watch Cal
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[Cal tried to sneak past her and tripped on his robe. Not that it mattered, she knew you were there dude. Guess You're gonna have to fight.]
+(else:)[Way to take the initiative Cal! That magic missile to the chest is a quick way to take out a ghost.]
+
+[[The end so far->Chapter Complete]]
+
+:: DM Watch Ren
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[Ren, you moron. You have the best eye sight and can see it's a ghost, yet you decided to throw a fucking stick at it? Dude you're so dead.]
+(else:)[Well you talked to her like a dad and convinced her to help, so I guess that works. I'm not sure how helpful it was for her to tell you about some "pointy sticks"]
+
+[[The end so far->Chapter Complete]]
+
+:: DM Watch Kili
+(set: $roll to (random: 1, 20))
+Roll D20: $roll
+
+(if: $roll <= 10)[Oh dwarf guy, Kili I think. I kinda forgot about you. Let's see what you d.... dude no fucking way. Did you really try to kiss the ghost. That is not your goth baddie!]
+(else:)[You are the only one who could have recognized that she was a 200 year old princess, and promised to save her kingdom. Nice work dude.]
+
+[[The end so far->Chapter Complete]]
+
+:: Chapter Complete
+You have completed this playable chapter of Tales of Visteria.
+
+[[Restart->Start]]

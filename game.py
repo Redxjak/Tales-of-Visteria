@@ -13,8 +13,10 @@ def resource_path(filename):
 
 
 SAVE_FILE = Path("savegame.json")
+STATS_FILE = Path("player_stats.json")
 MONSTER_FILE = resource_path("monster_stats.json")
 GAME_OVER_IMAGE = resource_path("game_over_party.png")
+TEXT_FILE = resource_path("translations/en.json")
 
 CLASSES = {
     "warrior": {
@@ -61,7 +63,7 @@ CLASSES = {
         "name": "Jon",
         "title": "DM",
         "health": 69,
-        "gold": 0,
+        "gold": 420,
         "supplies": 0,
         "gear": ["DM screen", "loaded d20"],
         "bonus": "fate",
@@ -84,18 +86,19 @@ MONSTER_ATTACKS = {
 
 THRONE_MAP_DIRECTIONS = ["left", "up", "right", "down"]
 
-
 class TalesOfVisteriaApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Tales of Visteria")
-        self.root.geometry("900x650")
-        self.root.minsize(720, 520)
+        self.root.geometry("1180x720")
+        self.root.minsize(960, 560)
         self.player = None
         self.pending_bridge = False
         self.combat = None
         self.game_over_image = None
         self.monsters = self.load_monsters()
+        self.text_content = self.load_text_content()
+        self.stats = self.load_stats()
 
         self.root.configure(bg="#141414")
         self.root.grid_rowconfigure(2, weight=1)
@@ -124,8 +127,16 @@ class TalesOfVisteriaApp:
         )
         self.status_label.grid(row=1, column=0, sticky="ew", padx=18)
 
-        story_frame = tk.Frame(root, bg="#141414")
-        story_frame.grid(row=2, column=0, sticky="nsew", padx=18, pady=14)
+        content_frame = tk.Frame(root, bg="#141414")
+        content_frame.grid(row=2, column=0, sticky="nsew", padx=18, pady=14)
+        content_frame.grid_rowconfigure(0, weight=1)
+        content_frame.grid_columnconfigure(1, weight=1)
+
+        self.character_panel = self.create_info_panel(content_frame, "Character Sheet", width=30)
+        self.character_panel.grid(row=0, column=0, sticky="ns", padx=(0, 12))
+
+        story_frame = tk.Frame(content_frame, bg="#141414")
+        story_frame.grid(row=0, column=1, sticky="nsew")
         story_frame.grid_rowconfigure(0, weight=1)
         story_frame.grid_columnconfigure(0, weight=1)
 
@@ -157,10 +168,54 @@ class TalesOfVisteriaApp:
         scrollbar.grid(row=0, column=1, sticky="ns")
         self.story_text.configure(yscrollcommand=scrollbar.set)
 
+        self.progress_panel = self.create_info_panel(content_frame, "Plot Development", width=34)
+        self.progress_panel.grid(row=0, column=2, sticky="ns", padx=(12, 0))
+
         self.choice_frame = tk.Frame(root, bg="#141414")
         self.choice_frame.grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 18))
 
         self.show_start_screen()
+
+    def create_info_panel(self, parent, title, width):
+        panel = tk.Frame(parent, bg="#1d1b18", highlightthickness=1, highlightbackground="#342b24")
+        label = tk.Label(
+            panel,
+            text=title,
+            bg="#24211d",
+            fg="#f2e6c9",
+            font=("Segoe UI", 11, "bold"),
+            anchor="w",
+            padx=10,
+            pady=6,
+        )
+        label.pack(fill="x")
+
+        text = tk.Text(
+            panel,
+            width=width,
+            wrap="word",
+            bg="#1d1b18",
+            fg="#f5ead2",
+            relief="flat",
+            padx=10,
+            pady=10,
+            font=("Consolas", 10),
+            borderwidth=0,
+            highlightthickness=0,
+            cursor="arrow",
+            takefocus=0,
+        )
+        text.pack(fill="both", expand=True)
+        text.configure(state="disabled")
+        panel.text_widget = text
+        return panel
+
+    def set_panel_text(self, panel, text):
+        widget = panel.text_widget
+        widget.configure(state="normal")
+        widget.delete("1.0", "end")
+        widget.insert("end", text)
+        widget.configure(state="disabled")
 
     def load_monsters(self):
         if not MONSTER_FILE.exists():
@@ -169,6 +224,175 @@ class TalesOfVisteriaApp:
             return json.loads(MONSTER_FILE.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             return {}
+
+    def load_text_content(self):
+        if not TEXT_FILE.exists():
+            return {}
+        try:
+            content = json.loads(TEXT_FILE.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+        return content if isinstance(content, dict) else {}
+
+    def text(self, key, **values):
+        template = self.text_content.get(key, key)
+        if not values:
+            return template
+        try:
+            return template.format(**values)
+        except (KeyError, ValueError):
+            return template
+
+    def write_text(self, key, clear=False, **values):
+        self.write(self.text(key, **values), clear=clear)
+
+    def default_stats(self):
+        return {
+            key: {
+                "name": data["name"],
+                "runs": 0,
+                "reached_end": 0,
+                "died": 0,
+                "forest_attempts": 0,
+            }
+            for key, data in CLASSES.items()
+        }
+
+    def load_stats(self):
+        stats = self.default_stats()
+        if STATS_FILE.exists():
+            try:
+                saved_stats = json.loads(STATS_FILE.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                saved_stats = {}
+            for key, values in saved_stats.items():
+                if key in stats and isinstance(values, dict):
+                    stats[key].update(values)
+        return stats
+
+    def save_stats(self):
+        STATS_FILE.write_text(json.dumps(self.stats, indent=2), encoding="utf-8")
+
+    def record_stat(self, stat_name):
+        if not self.player:
+            return
+        character_class = self.player["class"]
+        if character_class not in self.stats:
+            return
+        self.stats[character_class][stat_name] += 1
+        self.save_stats()
+
+    def stats_summary(self):
+        lines = [self.text("ui.stats_heading")]
+        for key, data in CLASSES.items():
+            stats = self.stats.get(key, {})
+            lines.append(
+                self.text(
+                    "ui.stats_line",
+                    name=data["name"],
+                    runs=stats.get("runs", 0),
+                    endings=stats.get("reached_end", 0),
+                    deaths=stats.get("died", 0),
+                    forest_attempts=stats.get("forest_attempts", 0),
+                )
+            )
+        return "\n".join(lines)
+
+    def character_sheet_text(self):
+        if not self.player:
+            return "No character selected.\n\nStart a new game or load a save."
+
+        stats = PLAYER_COMBAT_STATS[self.player["class"]]
+        lines = [
+            "Trait              Value",
+            "-" * 30,
+            f"Name               {self.player['name']}",
+            f"Class              {self.player['title']}",
+            "Level              5" if self.player["class"] != "dm" else "Level              DM",
+            f"HP                 {self.player['health']}/{self.player['max_health']}",
+            f"AC                 {stats['ac']}",
+            f"Attack Bonus       +{stats['attack_bonus']}",
+            f"Damage             d{stats['damage_die']} + {stats['damage_bonus']}",
+            f"Attacks            {stats.get('attacks', 1)}",
+            f"Gold               {self.player['gold']}",
+            f"Supplies           {self.player['supplies']}",
+            "",
+            "Equipment",
+            "-" * 30,
+        ]
+        lines.extend(f"- {item}" for item in self.player["gear"])
+        if not self.player["gear"]:
+            lines.append("- none")
+
+        inventory = []
+        for item in ("health potion", "cracked doll", "throne room map", "dwarven ale", "magistone orb"):
+            if item in self.player["gear"]:
+                inventory.append(item)
+        if not inventory:
+            inventory.append("none")
+
+        lines.extend(["", "Inventory", "-" * 30])
+        lines.extend(f"- {item}" for item in inventory)
+        return "\n".join(lines)
+
+    def progress_text(self):
+        if not self.player:
+            return self.stats_summary()
+
+        flags = self.player["flags"]
+        chapter = self.player["chapter"]
+        chapter_order = [
+            "caravan",
+            "escape",
+            "cave",
+            "ghost",
+            "districts",
+            "residential",
+            "bridge",
+            "production",
+            "complete",
+        ]
+        current_index = chapter_order.index(chapter) if chapter in chapter_order else -1
+
+        def checked(label, done):
+            return f"[{'x' if done else ' '}] {label}"
+
+        lines = [
+            "Plot Development",
+            "-" * 30,
+            checked("Caravan attack", current_index >= 1 or self.player["class"] == "dm"),
+            checked("Escaped to the cave", current_index >= 2),
+            checked("Met the pale girl", current_index >= 3),
+            checked("Reached the road sign", current_index >= 4),
+            checked("Explored a district", current_index >= 5),
+            checked("Reached residential area", current_index >= 6),
+            checked("Reached the bridge", current_index >= 7 or flags.get("bridge_crossed")),
+            checked("Escaped the buried city", chapter == "complete"),
+            "",
+            "Quests",
+            "-" * 30,
+            checked("Survive Visteria", chapter == "complete"),
+            checked("Find the throne map", flags.get("has_throne_map", False)),
+            checked("Remember bridge directions", flags.get("has_throne_map", False)),
+            checked("Carry the cracked doll", flags.get("has_doll", False)),
+            "",
+            "Session Notes",
+            "-" * 30,
+            f"Forest attempts: {flags.get('forest_attempts', 0)}/5",
+        ]
+        if flags.get("girl_hint") == "barracks_glowing_ball":
+            lines.append('Girl hint: pointy sticks / "glowing ball"')
+        elif flags.get("girl_hint"):
+            lines.append("Girl hint: barracks / merchant district")
+        if flags.get("monsters_scattered"):
+            lines.append("Orcs and goblins scattered by the pale girl")
+        return "\n".join(lines)
+
+    def refresh_side_panels(self):
+        if hasattr(self, "character_panel"):
+            self.set_panel_text(self.character_panel, self.character_sheet_text())
+        if hasattr(self, "progress_panel"):
+            self.set_panel_text(self.progress_panel, self.progress_text())
 
     def write(self, text, clear=False):
         self.story_text.configure(state="normal")
@@ -197,17 +421,22 @@ class TalesOfVisteriaApp:
         monster = self.monsters.get(name.lower())
         if not monster:
             return ""
-        return (
-            f"{monster['name']} Stats: CR {monster['cr']} | AC {monster['ac']} | "
-            f"HP {monster['hp']} | STR {monster['str']} | DEX {monster['dex']} | "
-            f"CON {monster['con']}"
+        return self.text(
+            "ui.monster_stats",
+            name=monster["name"],
+            cr=monster["cr"],
+            ac=monster["ac"],
+            hp=monster["hp"],
+            strength=monster["str"],
+            dexterity=monster["dex"],
+            constitution=monster["con"],
         )
 
     def show_monsters(self, names):
         lines = [self.monster_line(name) for name in names]
         lines = [line for line in lines if line]
         if lines:
-            self.write("Monster Reference\n" + "\n".join(lines))
+            self.write(self.text("ui.monster_reference") + "\n" + "\n".join(lines))
 
     def set_choices(self, choices):
         for child in self.choice_frame.winfo_children():
@@ -244,16 +473,25 @@ class TalesOfVisteriaApp:
 
     def update_status(self):
         if not self.player:
-            self.status_var.set("Main Menu")
+            self.status_var.set(self.text("choice.main_menu"))
+            self.refresh_side_panels()
             return
 
-        gear = ", ".join(self.player["gear"]) if self.player["gear"] else "none"
+        gear = ", ".join(self.player["gear"]) if self.player["gear"] else self.text("ui.none")
         title = self.player.get("title", CLASSES[self.player["class"]]["title"])
         self.status_var.set(
-            f"{self.player['name']} the {title}   "
-            f"Health: {self.player['health']}/{self.player['max_health']}   Gold: {self.player['gold']}   "
-            f"Supplies: {self.player['supplies']}   Gear: {gear}"
+            self.text(
+                "ui.status",
+                name=self.player["name"],
+                title=title,
+                health=self.player["health"],
+                max_health=self.player["max_health"],
+                gold=self.player["gold"],
+                supplies=self.player["supplies"],
+                gear=gear,
+            )
         )
+        self.refresh_side_panels()
 
     def new_player(self, character_class):
         template = CLASSES[character_class]
@@ -277,8 +515,11 @@ class TalesOfVisteriaApp:
                 "girl_hint": "",
                 "monsters_scattered": False,
                 "has_throne_map": False,
+                "death_recorded": False,
+                "completed_recorded": False,
             },
         }
+        self.record_stat("runs")
         self.update_status()
         self.continue_chapter(clear=True)
 
@@ -295,45 +536,49 @@ class TalesOfVisteriaApp:
         flags.setdefault("girl_hint", "")
         flags.setdefault("monsters_scattered", False)
         flags.setdefault("has_throne_map", False)
+        flags.setdefault("death_recorded", False)
+        flags.setdefault("completed_recorded", False)
 
     def save_game(self):
         if not self.player:
             return
         SAVE_FILE.write_text(json.dumps(self.player, indent=2), encoding="utf-8")
-        self.write("Game saved.")
+        self.write_text("ui.game_saved")
 
     def load_game(self):
         if not SAVE_FILE.exists():
-            messagebox.showinfo("Load Game", "No saved game found.")
+            messagebox.showinfo(self.text("ui.load_game_title"), self.text("ui.no_saved_game"))
             return
         try:
             self.player = json.loads(SAVE_FILE.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            messagebox.showerror("Load Game", "The save file could not be read.")
+            messagebox.showerror(self.text("ui.load_game_title"), self.text("ui.save_read_error"))
             return
 
         self.ensure_player_defaults(self.player)
         self.update_status()
-        self.write("Loaded saved game.", clear=True)
+        self.write_text("ui.loaded_game", clear=True)
         self.continue_chapter()
 
     def add_item(self, item):
         if item not in self.player["gear"]:
             self.player["gear"].append(item)
+            self.update_status()
 
     def remove_item(self, item):
         if item in self.player["gear"]:
             self.player["gear"].remove(item)
+            self.update_status()
 
     def roll_d20(self, skill):
         bonus = 2 if self.player["bonus"] == skill else 0
         result = random.randint(1, 20) + bonus
-        self.write(f"Roll: {result}")
+        self.write_text("ui.roll", result=result)
         return result
 
     def roll(self, skill, difficulty):
         result = self.roll_d20(skill)
-        self.write(f"Difficulty: {difficulty}")
+        self.write_text("ui.difficulty", difficulty=difficulty)
         return result >= difficulty
 
     def check_death(self):
@@ -343,26 +588,24 @@ class TalesOfVisteriaApp:
             return True
         return False
 
+    def set_game_over_reason(self, reason):
+        if self.player:
+            self.player["game_over_reason"] = reason
+
     def show_start_screen(self):
         self.player = None
         self.update_status()
-        self.write(
-            "Welcome to Tales of Visteria.\n\n"
-            "A story DM'd by Jubikino\n"
-            "An adaption made by Redxjak\n\n"
-            "Choose New Game to begin, or Load Game to continue a saved journey.",
-            clear=True,
-        )
+        self.write_text("story.start", stats=self.stats_summary(), clear=True)
         self.set_choices(
             [
-                ("New Game", self.show_character_select),
-                ("Load Game", self.load_game),
-                ("Quit", self.root.destroy),
+                (self.text("choice.new_game"), self.show_character_select),
+                (self.text("choice.load_game"), self.load_game),
+                (self.text("choice.quit"), self.root.destroy),
             ]
         )
 
     def show_character_select(self):
-        lines = ["Choose your character."]
+        lines = [self.text("story.character_select")]
         for key, data in CLASSES.items():
             lines.append(f"{data['name']} the {data['title']}: {data['description']}")
         self.write("\n".join(lines), clear=True)
@@ -373,7 +616,7 @@ class TalesOfVisteriaApp:
                 ("Cal", lambda: self.new_player("scholar")),
                 ("Kili", lambda: self.new_player("dwarf")),
                 ("Jon the DM", lambda: self.new_player("dm")),
-                ("Back", self.show_start_screen),
+                (self.text("choice.back"), self.show_start_screen),
             ]
         )
 
@@ -405,72 +648,50 @@ class TalesOfVisteriaApp:
         elif chapter == "complete":
             self.complete(clear)
         else:
-            self.write("Your save is at an unknown chapter.", clear=clear)
-            self.set_choices([("Main Menu", self.show_start_screen)])
+            self.write_text("ui.unknown_chapter", clear=clear)
+            self.set_choices([(self.text("choice.main_menu"), self.show_start_screen)])
 
     def dm_intro(self, clear=False):
-        self.write(
-            "You look down from above at the puny mortals of Visteria.\n"
-            "Their caravan crawls along the road, quiet and terribly untested.\n\n"
-            "What trouble do you send?",
-            clear=clear,
-        )
+        self.write_text("story.dm_intro", clear=clear)
         self.set_choices(
             [
-                ("Orcs and Goblins. \n"
-                     "Let's see how they fare",
+                (self.text("choice.dm_orcs"),
                  lambda: self.dm_send_trouble("orcs")),
-                ("Fuck dem kids. \n "
-                    "Send the Hydra",
+                (self.text("choice.dm_hydra"),
                  lambda: self.dm_send_trouble("hydra")),
-                ("Save", self.save_game),
-                ("Main Menu", self.show_start_screen),
+                (self.text("choice.save"), self.save_game),
+                (self.text("choice.main_menu"), self.show_start_screen),
             ]
         )
 
     def dm_send_trouble(self, choice):
         if choice == "hydra":
             self.show_monsters(["Hydra"])
-            self.write(
-                "You send the hydra.\n\n"
-                "Haha! Did you see the way their eyeballs popped from their skulls? \n"
-                "Then the smell of their burning flesh, ah that was great... \n\n"
-                "I should make some popcorn."
-            )
+            self.write_text("story.dm_send_hydra")
+            self.set_game_over_reason("hydra")
             self.player["health"] = 0
             self.check_death()
             return
 
         self.show_monsters(["Orc", "Goblin"])
-        self.write(
-            "Wow. They ran like little bitches\n"
-            "Fine. I guess that means I get to keep playing with their lives.\n\n"
-            "Do I let them go to the Forest of life, and power, or the cave of darkness and despair?"
-        )
+        self.write_text("story.dm_send_orcs")
         self.set_choices(
             [
-                ("Caves", lambda: self.dm_choose_route("caves")),
-                ("Forest", lambda: self.dm_choose_route("forest")),
+                (self.text("choice.caves"), lambda: self.dm_choose_route("caves")),
+                (self.text("choice.forest"), lambda: self.dm_choose_route("forest")),
             ]
         )
 
     def dm_choose_route(self, choice):
         if choice == "forest":
-            self.write(
-                "Like it was even a question. Of course, I want them to despair.\n"
-                "Let's stay in these caves for months!"
-            )
+            self.write_text("story.dm_choose_forest")
         else:
-            self.write("Caves was always the option. The caves are really the whole story.")
+            self.write_text("story.dm_choose_caves")
         self.player["chapter"] = "dm_ghost"
         self.continue_chapter()
 
     def dm_ghost(self, clear=False):
-        self.write(
-            "Alright what are these fuck tards, sorry uh 'heroes' going to do now?\n"
-            "Who do I want to creepily watch?",
-            clear=clear,
-        )
+        self.write_text("story.dm_ghost", clear=clear)
         self.set_choices(
             [
                 ("Cletus", lambda: self.dm_watch("cletus")),
@@ -482,145 +703,90 @@ class TalesOfVisteriaApp:
 
     def dm_watch(self, choice):
         roll = random.randint(1, 20)
-        outcomes = {
-            "cletus": {
-                "low": (
-                    "Cletus doesn't think and just rushes to the ghost girl and tries to "
-                    "swing his axe and falls on his ass. Hahahaha I can't believe he did that"
-                ),
-                "high": (
-                    'Cletus is actually good with kids and convinced her to go "play" '
-                    "with the orcs coming in. Oh boy, I did not expect that"
-                ),
-            },
-            "cal": {
-                "low": (
-                    "Cal tried to sneak past her and tripped on his robe. Not that it "
-                    "mattered, she knew you were there dude. Guess You're gonna have to fight."
-                ),
-                "high": (
-                    "Way to take the initiative Cal! That magic missile to the chest "
-                    "is a quick way to take out a ghost."
-                ),
-            },
-            "ren": {
-                "low": (
-                    "Ren, you moron. You have the best eye sight and can see it's a ghost, "
-                    "yet you decided to throw a fucking stick at it? Dude you're so dead."
-                ),
-                "high": (
-                    "Well you definitely talked to her like a dad, so I guess that works. "
-                    "I'm not sure how helpful it was for her to tell you about some \"pointy sticks\""
-                ),
-            },
-            "kili": {
-                "low": (
-                    "Oh dwarf guy, Kili I think. I kinda forgot about you. Let's see what "
-                    "you d.... dude no fucking way. Did you really try to kiss the ghost. "
-                    "That is not your goth baddie!"
-                ),
-                "high": (
-                    "You are the only one who could have recognized that she was a 200 year "
-                    "old princess, and promised to save her kingdom. Nice work dude."
-                ),
-            },
-        }
         result_key = "low" if roll <= 10 else "high"
-        self.write(f"Roll D20: {roll}\n\n{outcomes[choice][result_key]}")
+        self.write_text("story.dm_watch_result", roll=roll, result=self.text(f"story.dm_watch_{choice}_{result_key}"))
         self.player["chapter"] = "complete"
         self.continue_chapter()
 
     def caravan(self, clear=False):
-        self.write(
-            "Your caravan crawls through the dusk road to Visteria.\n"
-            "Then horns split the air. Goblins rush from the brush. Orcs break the line.\n"
-            "You fight beside the wagons until the guards are scattered and the road is lost.\n\n"
-            "Do you stand and fight, or run for the ravine?",
-            clear=clear,
-        )
+        self.write_text("story.caravan", clear=clear)
         self.show_monsters(["Goblin", "Orc"])
         self.set_choices(
             [
-                ("Fight", lambda: self.caravan_choice("fight")),
-                ("Run", lambda: self.caravan_choice("run")),
-                ("Save", self.save_game),
-                ("Main Menu", self.show_start_screen),
+                (self.text("choice.fight"), lambda: self.caravan_choice("fight")),
+                (self.text("choice.run"), lambda: self.caravan_choice("run")),
+                (self.text("choice.save"), self.save_game),
+                (self.text("choice.main_menu"), self.show_start_screen),
             ]
         )
 
     def caravan_choice(self, choice):
         if choice == "fight":
-            self.write("You cut down two attackers, but more pour in from the smoke.")
+            self.write_text("story.caravan_fight")
             self.player["health"] -= 3
             self.add_item("notched axe")
         else:
-            self.write("You dive through the burning canvas and sprint toward the ravine.")
+            self.write_text("story.caravan_run")
             self.player["supplies"] += 1
 
         if self.check_death():
             return
-        self.write("The caravan is overrun. Escape is the only thing left.")
+        self.write_text("story.caravan_overrun")
         self.player["chapter"] = "escape"
         self.continue_chapter()
 
     def escape(self, clear=False):
-        self.write(
-            "You are still being chased.\n"
-            "Ahead stands a faded signpost, its words scraped away by time.\n\n"
-            "One path leads into a forest with gray miasma. The other drops into a cave.",
-            clear=clear,
-        )
+        self.write_text("story.escape", clear=clear)
         self.set_choices(
             [
-                ("Forest", lambda: self.escape_choice("forest")),
-                ("Cave", lambda: self.escape_choice("cave")),
-                ("Save", self.save_game),
-                ("Main Menu", self.show_start_screen),
+                (self.text("choice.forest"), lambda: self.escape_choice("forest")),
+                (self.text("choice.cave"), lambda: self.escape_choice("cave")),
+                (self.text("choice.save"), self.save_game),
+                (self.text("choice.main_menu"), self.show_start_screen),
             ]
         )
 
     def escape_choice(self, choice):
         if choice == "forest":
             self.player["flags"]["forest_attempts"] += 1
-            self.write(
-                "The forest breathes a gray miasma.\n"
-                "Your thoughts loosen. Branches bend into familiar shapes.\n"
-                "After hours, you stagger back to the same blood-stained road, still being chased, as if no time passed."
-            )
+            self.record_stat("forest_attempts")
+            self.write_text("story.escape_forest")
+            if self.player["flags"]["forest_attempts"] > 5:
+                self.set_game_over_reason("forest_mind_break")
+                self.player["health"] = 0
+                self.check_death()
+                return
             if self.player["flags"]["forest_attempts"] >= 2:
-                self.write("The forest will not let you pass. The cave waits like a mouth.")
+                self.write_text("story.escape_forest_repeat")
             self.escape()
             return
 
-        self.write("You slip into the cave as shouts rise behind you.")
+        self.write_text("story.escape_cave")
         self.player["chapter"] = "cave"
         self.continue_chapter()
 
     def cave(self, clear=False):
-        self.write(
-            "The cave descends into an ancient buried city. Everything here is dead.\n"
-            "Behind you, goblin voices echo closer.\n\n"
-            "Do you fight them, or go deeper?",
-            clear=clear,
-        )
+        self.write_text("story.cave", clear=clear)
         self.show_monsters(["Goblin"])
         self.set_choices(
             [
-                ("Fight", lambda: self.cave_choice("fight")),
-                ("Go Deeper", lambda: self.cave_choice("deeper")),
+                (self.text("choice.fight"), lambda: self.cave_choice("fight")),
+                (self.text("choice.go_deeper"), lambda: self.cave_choice("deeper")),
             ]
         )
 
     def cave_choice(self, choice):
         if choice == "fight":
             if self.roll("combat", 13):
-                self.write("You hold the narrow passage and drive them back.")
+                self.write_text("story.cave_fight_success")
                 self.player["gold"] += 4
             else:
-                self.write("They overwhelm your guard before fleeing from something farther below.")
+                self.write_text("story.cave_fight_fail")
                 self.player["health"] -= 4
+                if self.player["health"] <= 0:
+                    self.set_game_over_reason("combat")
         else:
-            self.write("You hurry deeper until the voices fade.")
+            self.write_text("story.cave_deeper")
 
         if self.check_death():
             return
@@ -628,17 +794,13 @@ class TalesOfVisteriaApp:
         self.continue_chapter()
 
     def ghost_girl(self, clear=False):
-        self.write(
-            "Little girl with white face and black hair standing in the corridor.\n\n"
-            "What do you do?",
-            clear=clear,
-        )
+        self.write_text("story.ghost_girl", clear=clear)
         self.show_monsters(["Ghost"])
         self.set_choices(
             [
-                ("Persuade", lambda: self.ghost_choice("persuade")),
-                ("Fight", lambda: self.ghost_choice("fight")),
-                ("Sneak Past", lambda: self.ghost_choice("sneak")),
+                (self.text("choice.persuade"), lambda: self.ghost_choice("persuade")),
+                (self.text("choice.fight"), lambda: self.ghost_choice("fight")),
+                (self.text("choice.sneak_past"), lambda: self.ghost_choice("sneak")),
             ]
         )
 
@@ -665,112 +827,75 @@ class TalesOfVisteriaApp:
         result = self.roll_d20("persuasion")
 
         if result <= 7:
-            self.write("Drops doll and disappears")
+            self.write_text("story.persuade_low")
             return "doll"
         elif result <= 15:
-            self.write(
-                "Help - points to barracks and says there are pointy sticks. "
-                "Points to city and says there is shinny stuff. Leaves and drops doll"
-            )
+            self.write_text("story.persuade_mid")
             self.player["flags"]["girl_helped"] = True
-            self.player["flags"]["girl_hint"] = "barracks_city"
+            self.player["flags"]["girl_hint"] = "barracks_glowing_ball"
             return "doll"
 
-        self.write(
-            "You tell her you are being chased and ask for her help. She disappears and drops a doll. "
-            "You hear terrified screams of orcs and goblins.\n\n"
-            "You carefully, but swiftly, walk deeper, unwilling to turn back to the horrors you can only "
-            "imagine going on to the monsters behind you."
-        )
+        self.write_text("story.persuade_high")
         self.player["flags"]["girl_helped"] = True
         self.player["flags"]["monsters_scattered"] = True
         return "districts"
 
     def ghost_black_pits_death(self):
-        self.write(
-            "Her eyes turn to black empty pits of despair. You feel as if you are staring into a black "
-            "hole that sucks you in. Nothing matters to you. Soon you lose your sense of self. "
-            "You lose your life."
-        )
+        self.write_text("story.ghost_black_pits_death")
+        self.set_game_over_reason("ghost_black_pits")
         self.player["health"] = 0
         self.player["flags"]["girl_angry"] = True
         return "death"
 
     def ghost_black_miasma(self):
-        self.write(
-            "Black miasma like smoke pours from her and she disappears into it. "
-            "Before long that disappears as well."
-        )
+        self.write_text("story.ghost_black_miasma")
         self.player["flags"]["girl_helped"] = True
         return "doll"
 
     def ghost_play_death(self):
-        self.write('She looks at you and giggles "Play?"')
+        self.write_text("story.ghost_play")
         return self.ghost_black_pits_death()
 
     def fight_girl(self):
         character_class = self.player["class"]
         if character_class == "warrior":
-            self.write(
-                "You let out a mighty war cry, raise your axe and run at the apparition, with the "
-                "knowledge that nothing can stop you.\n\n"
-                "You aimed for the head and swung through it like an axe through air, and keep going. "
-                "You pass completely through her and fall to the ground. Yup you were right, nothing "
-                "could stop you."
-            )
+            self.write_text("story.fight_girl_warrior")
             return self.ghost_play_death()
         elif character_class == "scholar":
-            self.write(
-                "You feel for the swirling core of potential in your soul and feel the power there. "
-                "With an extension of your will, of manifest it in blast of power and hurl it at the "
-                "unknown spectre in front of you.\n\n"
-                "She lets out an ear piercing screen that disorients you. You feel blood coming out of "
-                "your ears and have the worst headache of your life."
-            )
+            self.write_text("story.fight_girl_scholar")
             self.player["health"] -= 3
             return self.ghost_black_miasma()
         elif character_class == "ranger":
-            self.write(
-                "You knock and arrow and pull back on the bow string. You aim carefully at the little "
-                "girl with the precision of a hunter and release the string.\n\n"
-                "Your arrow passes through her as if nothing was there. Your keen eyes notice a slight "
-                "distortion where the arrow flew through."
-            )
+            self.write_text("story.fight_girl_ranger")
             return self.ghost_play_death()
 
-        self.write(
-            "Damn, is that my goth baddie? I'm gonna give her a kiss.\n\n"
-            "You run as fast as your short legs can take you to your 17.50"
-        )
-        return self.ghost_black_pits_death()
+        elif character_class == "dwarf":
+            self.write_text("story.fight_girl_dwarf")
+            return self.ghost_black_pits_death()
+
+        return self.ghost_black_miasma()
 
     def sneak_past_girl(self):
-        self.write("You try to slip past her without drawing attention.")
-        self.write(
-            "She turns her head and watches you, even through walls. Once you get to a point past her, "
-            "she instantly appears in front of you."
-        )
+        self.write_text("story.sneak_past_girl_start")
+        self.write_text("story.sneak_past_girl_result")
         return self.ghost_black_miasma()
 
     def doll_choice(self):
-        self.write("You hear the monsters getting closer. Do you grab the doll, or just run?")
+        self.write_text("story.doll_choice")
         self.set_choices(
             [
-                ("Grab the Doll", lambda: self.doll_result("grab")),
-                ("Leave the doll and run", lambda: self.doll_result("leave")),
+                (self.text("choice.grab_doll"), lambda: self.doll_result("grab")),
+                (self.text("choice.leave_doll"), lambda: self.doll_result("leave")),
             ]
         )
 
     def doll_result(self, choice):
         if choice == "grab":
-            self.write("You quickly grab the doll and start running.")
+            self.write_text("story.doll_grab")
             self.add_item("cracked doll")
             self.player["flags"]["has_doll"] = True
         else:
-            self.write(
-                "You turn away from the doll and run. You feel a shiver and sneak a quick glance back. "
-                "The doll is gone."
-            )
+            self.write_text("story.doll_leave")
         self.player["chapter"] = "districts"
         self.continue_chapter()
 
@@ -779,25 +904,25 @@ class TalesOfVisteriaApp:
         if item == "gold":
             amount = random.randint(5, 15)
             self.player["gold"] += amount
-            self.write(f"You find {amount} gold.")
+            self.write_text("story.loot_gold", amount=amount)
         elif item == "supplies":
             amount = random.randint(1, 3)
             self.player["supplies"] += amount
-            self.write(f"You recover {amount} supplies.")
+            self.write_text("story.loot_supplies", amount=amount)
         else:
             self.add_item(item)
-            self.write(f"You find {item}.")
+            self.write_text("story.loot_item", item=item)
 
     def search_area_loot(self, area):
         roll = self.roll_d20("lore")
         if roll <= 7:
             if area == "city":
-                self.write("You found a few gold coins, some rotten fruit, and a used bandage. Gross.")
+                self.write_text("story.search_city_low")
                 self.player["gold"] += 3
             else:
-                self.write("Everything has been picked clean, there is nothing here.")
+                self.write_text("story.search_empty")
         elif roll <= 14:
-            self.write("A health potion")
+            self.write_text("story.search_potion")
             self.add_item("health potion")
         else:
             self.award_throne_map()
@@ -806,11 +931,7 @@ class TalesOfVisteriaApp:
 
     def award_throne_map(self):
         directions = ", ".join(direction.upper() for direction in THRONE_MAP_DIRECTIONS)
-        self.write(
-            "Map showing the direct route to the throne room, with instructions on how to avoid the traps.\n\n"
-            f"The safe bridge path is: {directions}.\n"
-            "Remember it or write it down. The map is too brittle to keep checking later."
-        )
+        self.write_text("story.throne_map", directions=directions)
         self.add_item("throne room map")
         self.player["flags"]["has_throne_map"] = True
 
@@ -839,7 +960,7 @@ class TalesOfVisteriaApp:
             "guarding": False,
             "attackers_per_round": attackers_per_round,
         }
-        self.write("Initiate combat.")
+        self.write_text("ui.initiate_combat")
         self.show_monsters(sorted(set(enemies)))
         self.show_combat_choices()
 
@@ -851,8 +972,8 @@ class TalesOfVisteriaApp:
     def combat_summary(self):
         enemies = self.living_enemies()
         if not enemies:
-            return "No enemies standing."
-        return "Enemies: " + ", ".join(
+            return self.text("ui.no_enemies")
+        return self.text("ui.enemies") + " " + ", ".join(
             f"{enemy['name']} HP {enemy['hp']}/AC {enemy['ac']}" for enemy in enemies
         )
 
@@ -860,13 +981,13 @@ class TalesOfVisteriaApp:
         self.update_status()
         self.write(self.combat_summary())
         choices = [
-            ("Attack", lambda: self.combat_action("attack")),
-            ("Heavy Attack", lambda: self.combat_action("heavy")),
-            ("Dodge", lambda: self.combat_action("dodge")),
-            ("Run", lambda: self.combat_action("run")),
+            (self.text("choice.attack"), lambda: self.combat_action("attack")),
+            (self.text("choice.heavy_attack"), lambda: self.combat_action("heavy")),
+            (self.text("choice.dodge"), lambda: self.combat_action("dodge")),
+            (self.text("choice.run"), lambda: self.combat_action("run")),
         ]
         if "health potion" in self.player["gear"]:
-            choices.append(("Health Potion", lambda: self.combat_action("potion")))
+            choices.append((self.text("choice.health_potion"), lambda: self.combat_action("potion")))
         self.set_choices(choices)
 
     def player_combat_stats(self):
@@ -879,18 +1000,18 @@ class TalesOfVisteriaApp:
             old_health = self.player["health"]
             self.player["health"] = min(self.player["max_health"], self.player["health"] + healing)
             actual_healing = self.player["health"] - old_health
-            self.write(f"You drink a health potion and regain {actual_healing} health.")
+            self.write_text("story.combat_potion", healing=actual_healing)
             self.enemy_combat_turn()
             return
 
         if action == "run":
             roll = self.roll_d20("sneak")
             if roll >= 12:
-                self.write("You break away from the fight and keep moving.")
+                self.write_text("story.combat_run_success")
                 self.combat = None
                 self.route_choice_done()
                 return
-            self.write("You try to run, but the monsters cut off your escape.")
+            self.write_text("story.combat_run_fail")
             self.enemy_combat_turn()
             return
 
@@ -902,7 +1023,7 @@ class TalesOfVisteriaApp:
         self.combat["guarding"] = action == "dodge"
 
         if action == "dodge":
-            self.write("You focus on defense and try to avoid the next blow.")
+            self.write_text("story.combat_dodge")
             self.enemy_combat_turn()
             return
 
@@ -918,18 +1039,24 @@ class TalesOfVisteriaApp:
             enemy = living[0]
             attack_roll = random.randint(1, 20)
             total = attack_roll + attack_bonus
-            self.write(f"Attack {attack_number}: you roll {total} to hit {enemy['name']} AC {enemy['ac']}.")
+            self.write_text(
+                "story.combat_attack_roll",
+                attack_number=attack_number,
+                total=total,
+                enemy=enemy["name"],
+                ac=enemy["ac"],
+            )
 
             if attack_roll == 20 or total >= enemy["ac"]:
                 damage = random.randint(1, damage_die) + damage_bonus
                 if attack_roll == 20:
                     damage += random.randint(1, damage_die)
                 enemy["hp"] -= damage
-                self.write(f"You hit {enemy['name']} for {damage} damage.")
+                self.write_text("story.combat_hit", enemy=enemy["name"], damage=damage)
                 if enemy["hp"] <= 0:
-                    self.write(f"{enemy['name']} drops.")
+                    self.write_text("story.combat_enemy_drops", enemy=enemy["name"])
             else:
-                self.write("You miss.")
+                self.write_text("story.combat_miss")
 
         if not self.living_enemies():
             self.win_combat()
@@ -954,11 +1081,13 @@ class TalesOfVisteriaApp:
                 if roll == 20:
                     damage += random.randint(1, attack["damage_die"])
                 self.player["health"] -= damage
-                self.write(f"{enemy['name']} hits you for {damage} damage.")
+                self.write_text("story.enemy_hit", enemy=enemy["name"], damage=damage)
             else:
-                self.write(f"{enemy['name']} misses.")
+                self.write_text("story.enemy_miss", enemy=enemy["name"])
 
         self.combat["guarding"] = False
+        if self.player["health"] <= 0:
+            self.set_game_over_reason("combat")
         if self.check_death():
             self.combat = None
             return
@@ -967,127 +1096,108 @@ class TalesOfVisteriaApp:
     def win_combat(self):
         victory_text = self.combat["victory_text"]
         self.combat = None
-        self.write(victory_text)
-        self.write("Loot bodies to find a map.")
+        self.write_text(victory_text)
+        self.write_text("story.combat_loot_map")
         self.award_throne_map()
         self.update_status()
         self.route_choice_done()
 
     def districts(self, clear=False):
-        self.write(
-            "You get to the end of the road.\n"
-            "The sign points left to Barracks and right to the Merchant district.\n\n"
-            "Which route do you take?",
-            clear=clear,
-        )
+        self.write_text("story.districts", clear=clear)
         self.set_choices(
             [
-                ("Barracks", self.barracks),
-                ("Merchant District", self.city_district),
-                ("Save", self.save_game),
-                ("Main Menu", self.show_start_screen),
+                (self.text("choice.barracks"), self.barracks),
+                (self.text("choice.merchant_district"), self.city_district),
+                (self.text("choice.save"), self.save_game),
+                (self.text("choice.main_menu"), self.show_start_screen),
             ]
         )
 
     def city_district(self):
-        self.write("You turn right toward the city district.")
-        if self.player["flags"]["girl_hint"] == "barracks_city":
-            self.write("Shiny stuff. The girl's whisper follows you between the old market stalls.")
-        self.write(
-            "You enter the city gates and find your self in a market area, with some buildings "
-            "that look like homes down further\n\n"
-            "There is a band of 5 goblins and 2 orcs roaming around."
-        )
+        self.write_text("story.city_enter")
+        if self.player["flags"]["girl_hint"] in ("barracks_city", "barracks_glowing_ball"):
+            self.write_text("story.city_girl_hint")
+        self.write_text("story.city_description")
         self.show_monsters(["Orc", "Goblin"])
         self.set_choices(
             [
-                ("Sneak Into Shop", lambda: self.city_result("shop")),
-                ("Assault Monsters", lambda: self.city_result("assault")),
-                ("Sneak Past", lambda: self.city_result("sneak")),
+                (self.text("choice.sneak_shop"), lambda: self.city_result("shop")),
+                (self.text("choice.assault_monsters"), lambda: self.city_result("assault")),
+                (self.text("choice.sneak_past"), lambda: self.city_result("sneak")),
             ]
         )
 
     def city_result(self, choice):
         if choice == "shop":
-            self.write("You try to stay to the shadows and sneak into one of the open shops.")
+            self.write_text("story.city_shop")
             roll = self.roll_d20("sneak")
             if roll <= 10:
-                self.write("You reach for the door handle and push it open. A loud squeek echos out to the city.")
+                self.write_text("story.city_shop_fail")
                 self.city_combat()
             else:
-                self.write(
-                    "You reach for the door handle and slowly push it open. "
-                    "It looks like the owner kept it well oiled. Nice."
-                )
+                self.write_text("story.city_shop_success")
                 self.search_area_loot("city")
         elif choice == "assault":
-            self.write("You are immediately seen. Prepare for a fight.")
+            self.write_text("story.city_assault")
             self.city_combat()
         else:
-            self.write("You try to sneak past the monsters.")
+            self.write_text("story.city_sneak")
             roll = self.roll_d20("sneak")
             if roll <= 16:
-                self.write("You hear a war horn sound. You have been spotted.")
+                self.write_text("story.city_sneak_fail")
                 self.city_combat()
             else:
-                self.write("You successfully avoid their gaze and sneak past them.")
+                self.write_text("story.city_sneak_success")
                 self.route_choice_done()
 
     def city_combat(self):
         self.start_combat(
             ["goblin", "goblin", "goblin", "goblin", "goblin", "orc", "orc"],
-            "The last monster falls in the ruined market.",
+            "story.city_combat_victory",
             attackers_per_round=1,
         )
 
     def barracks(self):
-        self.write("You turn left toward the barracks.")
+        self.write_text("story.barracks_enter")
         if self.player["flags"]["girl_hint"] == "barracks_city":
-            self.write("Pointy sticks. The girl's whisper lingers in your head.")
-        self.write(
-            "You make your way into the barracks. In is shaped like a colosseum. Outer ring "
-            "holds an armory and living quarters, with a fighting pit in the center right. "
-            "There are three orcs in the inter ring."
-        )
+            self.write_text("story.barracks_girl_hint")
+        self.write_text("story.barracks_description")
         self.show_monsters(["Orc"])
         self.set_choices(
             [
-                ("Sneak to Armory", lambda: self.barracks_result("armory")),
-                ("Head to Center Ring", lambda: self.barracks_result("fight")),
-                ("Sneak to Quarters", lambda: self.barracks_result("quarters")),
+                (self.text("choice.sneak_armory"), lambda: self.barracks_result("armory")),
+                (self.text("choice.center_ring"), lambda: self.barracks_result("fight")),
+                (self.text("choice.sneak_quarters"), lambda: self.barracks_result("quarters")),
             ]
         )
 
     def barracks_result(self, choice):
         if choice == "armory":
-            self.write("You try to sneak to the armory.")
+            self.write_text("story.barracks_armory")
             roll = self.roll_d20("sneak")
             if roll <= 10:
-                self.write("You tripped over a left over shield. Prepare to fight.")
+                self.write_text("story.barracks_armory_fail")
                 self.barracks_combat()
             else:
-                self.write("You sucessfully made it to the armory.")
+                self.write_text("story.barracks_armory_success")
                 self.search_area_loot("barracks")
         elif choice == "fight":
-            self.write("The orcs immidiately notice you and prepare to fight. Good luck.")
+            self.write_text("story.barracks_fight")
             self.barracks_combat()
         else:
-            self.write("You try to sneak to the living quarters.")
+            self.write_text("story.barracks_quarters")
             roll = self.roll_d20("sneak")
             if roll <= 10:
-                self.write(
-                    "When you open the door to the first living area, you find a goblin in a dress. "
-                    "He screams and alerts the orcs."
-                )
+                self.write_text("story.barracks_quarters_fail")
                 self.barracks_combat()
             else:
-                self.write("You open the door and find it empty. You search around for anything useful.")
+                self.write_text("story.barracks_quarters_success")
                 self.search_area_loot("barracks")
 
     def barracks_combat(self):
         self.start_combat(
             ["orc", "orc", "orc"],
-            "The last orc falls in the fighting pit.",
+            "story.barracks_combat_victory",
             attackers_per_round=1,
         )
 
@@ -1098,16 +1208,11 @@ class TalesOfVisteriaApp:
         self.continue_chapter()
 
     def residential_area(self, clear=False):
-        self.write(
-            "Both routes narrow into the residential quarter.\n\n"
-            "Chests sit beside rotted clothes. Painted walls show Visteria before the fall.\n\n"
-            "Do you open chests, or study the rooms?",
-            clear=clear,
-        )
+        self.write_text("story.residential", clear=clear)
         self.set_choices(
             [
-                ("Open Chests", lambda: self.residential_result("chests")),
-                ("Study Rooms", lambda: self.residential_result("study")),
+                (self.text("choice.open_chests"), lambda: self.residential_result("chests")),
+                (self.text("choice.study_rooms"), lambda: self.residential_result("study")),
             ]
         )
 
@@ -1115,12 +1220,14 @@ class TalesOfVisteriaApp:
         if choice == "chests":
             if random.randint(1, 6) <= 2:
                 self.show_monsters(["Mimic"])
-                self.write("The chest opens its own teeth. Mimic.")
+                self.write_text("story.residential_mimic")
                 self.player["health"] -= 4
+                if self.player["health"] <= 0:
+                    self.set_game_over_reason("mimic")
             else:
                 self.loot(["gold", "supplies", "precious gems", "silver ring"])
         else:
-            self.write("You learn that the buried city was sealed after an eldritch ritual failed.")
+            self.write_text("story.residential_study")
             self.add_item("city lore")
 
         if self.check_death():
@@ -1129,41 +1236,30 @@ class TalesOfVisteriaApp:
         self.continue_chapter()
 
     def bridge_prompt(self, clear=False):
-        text = (
-            "The bridge crosses a black canal beneath the city.\n"
-            "On the far side, a warehouse burns with violet light.\n"
-            "Behind the walls, old city defenses grind awake."
-        )
+        text = self.text("story.bridge")
         if self.player["flags"].get("has_throne_map"):
-            text += (
-                "\n\nThe old map showed a safe route through the bridge traps, "
-                "but the parchment has crumbled from being handled too much.\n"
-                "You will need to follow the directions from memory."
-            )
+            text += self.text("story.bridge_has_map")
         else:
-            text += (
-                "\n\nWithout a map or memorized directions, it may be impossible to safely cross.\n"
-                "Do you cross anyway, or prepare first?"
-            )
+            text += self.text("story.bridge_no_map")
         self.write(text, clear=clear)
 
         if self.player["flags"].get("has_throne_map"):
             self.set_choices(
                 [
-                    ("Navigate Bridge", self.start_bridge_navigation),
-                    ("Prepare", lambda: self.cross_bridge("prepare")),
-                    ("Save", self.save_game),
-                    ("Main Menu", self.show_start_screen),
+                    (self.text("choice.navigate_bridge"), self.start_bridge_navigation),
+                    (self.text("choice.prepare"), lambda: self.cross_bridge("prepare")),
+                    (self.text("choice.save"), self.save_game),
+                    (self.text("choice.main_menu"), self.show_start_screen),
                 ]
             )
             return
 
         self.set_choices(
             [
-                ("Cross", lambda: self.cross_bridge("cross")),
-                ("Prepare", lambda: self.cross_bridge("prepare")),
-                ("Save", self.save_game),
-                ("Main Menu", self.show_start_screen),
+                (self.text("choice.cross"), lambda: self.cross_bridge("cross")),
+                (self.text("choice.prepare"), lambda: self.cross_bridge("prepare")),
+                (self.text("choice.save"), self.save_game),
+                (self.text("choice.main_menu"), self.show_start_screen),
             ]
         )
 
@@ -1172,44 +1268,45 @@ class TalesOfVisteriaApp:
             if self.player["supplies"] > 0:
                 self.player["supplies"] -= 1
                 self.player["health"] += 2
-                self.write("You bind wounds and steady your hands.")
+                self.write_text("story.bridge_prepare_success")
             else:
-                self.write("You have no supplies left.")
+                self.write_text("story.bridge_prepare_fail")
             self.update_status()
             self.bridge_prompt()
             return
 
-        self.write("Inside the warehouse, robed figures circle an eldritch ritual.")
+        self.write_text("story.warehouse_enter")
         if self.player["flags"]["girl_helped"]:
-            self.write("The cracked doll drops from your pack. The air turns cold.\nThe pale girl appears among them, and the ritual falters.")
+            self.write_text("story.warehouse_girl_helped")
         else:
-            self.write("The ritual notices you. That is the only way to describe it.")
+            self.write_text("story.warehouse_no_help")
 
         if self.roll("combat", 15) or self.player["flags"]["girl_helped"]:
-            self.write("You survive the warehouse battle and flee into the production tunnels.")
+            self.write_text("story.warehouse_success")
             self.player["flags"]["bridge_crossed"] = True
             self.player["chapter"] = "production"
             self.continue_chapter()
         else:
-            self.write("The battle breaks you against the warehouse floor.")
+            self.write_text("story.warehouse_fail")
+            self.set_game_over_reason("warehouse")
             self.player["health"] = 0
             self.check_death()
 
     def start_bridge_navigation(self):
         self.bridge_path = []
-        self.write("You step onto the trapped bridge. Choose the first direction.")
+        self.write_text("story.bridge_navigation_start")
         self.bridge_navigation_step()
 
     def bridge_navigation_step(self):
         step_names = ["first", "second", "third", "fourth"]
         step = step_names[len(self.bridge_path)]
-        self.write(f"Choose the {step} direction.")
+        self.write_text("story.bridge_navigation_step", step=step)
         self.set_choices(
             [
-                ("Left", lambda: self.bridge_navigation_choice("left")),
-                ("Right", lambda: self.bridge_navigation_choice("right")),
-                ("Up", lambda: self.bridge_navigation_choice("up")),
-                ("Down", lambda: self.bridge_navigation_choice("down")),
+                (self.text("choice.left"), lambda: self.bridge_navigation_choice("left")),
+                (self.text("choice.right"), lambda: self.bridge_navigation_choice("right")),
+                (self.text("choice.up"), lambda: self.bridge_navigation_choice("up")),
+                (self.text("choice.down"), lambda: self.bridge_navigation_choice("down")),
             ]
         )
 
@@ -1218,41 +1315,34 @@ class TalesOfVisteriaApp:
         self.bridge_path.append(choice)
 
         if choice != expected:
-            self.write(
-                "The stone under your foot sinks with a hollow click.\n"
-                "The bridge trap opens beneath you."
-            )
+            self.write_text("story.bridge_wrong")
+            self.set_game_over_reason("bridge_trap")
             self.player["health"] = 0
             self.check_death()
             return
 
         if len(self.bridge_path) < len(THRONE_MAP_DIRECTIONS):
-            self.write("The bridge stays quiet.")
+            self.write_text("story.bridge_quiet")
             self.bridge_navigation_step()
             return
 
-        self.write("You follow the final direction and reach the far side without waking the traps.")
+        self.write_text("story.bridge_success")
         self.cross_bridge("cross")
 
     def production_area(self, clear=False):
         self.production_path = []
-        self.write(
-            "The production area is a maze of chains, hooks, furnaces, and dead machines.\n"
-            "One wrong turn will end you.\n\n"
-            "Choose the first path.",
-            clear=clear,
-        )
+        self.write_text("story.production", clear=clear)
         self.production_step()
 
     def production_step(self):
         step_names = ["first", "second", "third"]
         step = step_names[len(self.production_path)]
-        self.write(f"Choose the {step} path.")
+        self.write_text("story.production_step", step=step)
         self.set_choices(
             [
-                ("Left", lambda: self.production_choice("left")),
-                ("Center", lambda: self.production_choice("center")),
-                ("Right", lambda: self.production_choice("right")),
+                (self.text("choice.left"), lambda: self.production_choice("left")),
+                (self.text("choice.center"), lambda: self.production_choice("center")),
+                (self.text("choice.right"), lambda: self.production_choice("right")),
             ]
         )
 
@@ -1263,44 +1353,50 @@ class TalesOfVisteriaApp:
             return
 
         if self.production_path == ["left", "right", "center"]:
-            self.write(
-                "You find the hidden maintenance lift and ride it toward moonlight.\n"
-                "Chapter complete. You have escaped the buried city of Visteria."
-            )
+            self.write_text("story.production_success")
             self.player["chapter"] = "complete"
             self.continue_chapter()
         else:
-            self.write("The floor gives way beneath you. The production area keeps its secrets.")
+            self.write_text("story.production_fail")
+            self.set_game_over_reason("production")
             self.player["health"] = 0
             self.check_death()
 
     def complete(self, clear=False):
-        self.write("You have completed this playable chapter of Tales of Visteria.", clear=clear)
+        self.write_text("story.complete", clear=clear)
+        if not self.player["flags"].get("completed_recorded"):
+            self.record_stat("reached_end")
+            self.player["flags"]["completed_recorded"] = True
         self.save_game()
         self.set_choices(
             [
-                ("Main Menu", self.show_start_screen),
-                ("Quit", self.root.destroy),
+                (self.text("choice.main_menu"), self.show_start_screen),
+                (self.text("choice.quit"), self.root.destroy),
             ]
         )
 
     def game_over(self):
+        reason = "default"
+        if self.player:
+            reason = self.player.get("game_over_reason", "default")
+            if not self.player["flags"].get("death_recorded"):
+                self.record_stat("died")
+                self.player["flags"]["death_recorded"] = True
+        message = self.text(f"game_over.{reason}")
+        if message == f"game_over.{reason}":
+            message = self.text("game_over.default")
         self.write(
-            "==================================\n"
-            "             GAME OVER\n"
-            "==================================\n"
-            "You fall in the dark beneath Visteria.\n"
-            "Start a new game to try another route.\n\n"
-            "Thanks for playing.\n"
-            "This was made in memory of a DnD session with friends."
+            f"{self.text('story.game_over_header')}\n"
+            f"{message}\n\n"
+            f"{self.text('story.game_over_footer')}"
         )
         self.show_story_image(GAME_OVER_IMAGE)
         self.set_choices(
             [
-                ("New Game", self.show_character_select),
-                ("Load Game", self.load_game),
-                ("Main Menu", self.show_start_screen),
-                ("Quit", self.root.destroy),
+                (self.text("choice.new_game"), self.show_character_select),
+                (self.text("choice.load_game"), self.load_game),
+                (self.text("choice.main_menu"), self.show_start_screen),
+                (self.text("choice.quit"), self.root.destroy),
             ]
         )
 
