@@ -5,7 +5,10 @@ a = Analysis(
     ['game.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        ('monster_stats.json', '.'),
+        ('game_over_party.png', '.'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

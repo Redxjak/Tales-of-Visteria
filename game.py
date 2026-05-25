@@ -1,13 +1,20 @@
 import json
 import random
+import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
 
 
+def resource_path(filename):
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / filename
+    return Path(filename)
+
+
 SAVE_FILE = Path("savegame.json")
-MONSTER_FILE = Path("monster_stats.json")
-GAME_OVER_IMAGE = Path("game_over_party.png")
+MONSTER_FILE = resource_path("monster_stats.json")
+GAME_OVER_IMAGE = resource_path("game_over_party.png")
 
 CLASSES = {
     "warrior": {

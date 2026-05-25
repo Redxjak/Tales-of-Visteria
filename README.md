@@ -2,7 +2,15 @@
 
 A simple GUI dark fantasy adventure.
 
+## Content warning
+
+This game may contain vulgar language and dark fantasy themes.
+
 ## How to play
+
+Download or run the latest Windows executable:
+
+[TalesofVisteria.exe](dist/TalesofVisteria.exe)
 
 Run the game from this folder:
 
