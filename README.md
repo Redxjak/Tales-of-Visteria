@@ -1,0 +1,37 @@
+# Tales of Visteria
+
+A simple GUI dark fantasy adventure.
+
+## How to play
+
+Run the game from this folder:
+
+```powershell
+python game.py
+```
+
+If your computer uses the Python launcher instead:
+
+```powershell
+py game.py
+```
+
+On Windows, you can also double-click `Tales of Visteria.pyw` to launch the GUI without a console window.
+
+## Current chapter
+
+The playable opening includes:
+
+- Windowed start screen with new game, load game, and quit
+- Character selection with Cletus the Warrior, Ren the Ranger, Cal the Scholar, Kili the Dwarf, and Jon the DM
+- Special Jon the DM route based on the Visio map
+- A caravan attack and forced escape
+- Forest loop with miasma
+- Cave route into the buried city
+- Encounter with the pale girl
+- Character-specific outcomes in the pale girl scene
+- Doll choice after the pale girl disappears
+- City or barracks route, feeding into the residential area
+- Bridge, warehouse ritual, and production area finale
+- Basic save/load using `savegame.json`
+- Monster references loaded from `monster_stats.json`, generated from the D&D monster stats spreadsheet
