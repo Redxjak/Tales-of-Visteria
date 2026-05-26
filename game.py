@@ -27,7 +27,7 @@ CLASSES = {
         "supplies": 2,
         "gear": ["greataxe", "travel cloak"],
         "bonus": "combat",
-        "description": "Level 5 bruiser with high health and brutal melee attacks.",
+        "description": "A Goliath Barbarian with high health and brutal melee attacks.",
     },
     "ranger": {
         "name": "Ren",
@@ -37,7 +37,7 @@ CLASSES = {
         "supplies": 3,
         "gear": ["longbow", "short blade"],
         "bonus": "sneak",
-        "description": "Level 5 scout with strong accuracy and two attacks.",
+        "description": "An Elven Ranger with strong accuracy and two attacks.",
     },
     "scholar": {
         "name": "Cal",
@@ -47,7 +47,7 @@ CLASSES = {
         "supplies": 2,
         "gear": ["old journal", "silver charm", "eldritch focus"],
         "bonus": "persuasion",
-        "description": "Level 5 spellcaster with eldritch power and persuasion.",
+        "description": "A Human Warlock with eldritch power and persuasion.",
     },
     "dwarf": {
         "name": "Kili",
@@ -57,7 +57,7 @@ CLASSES = {
         "supplies": 3,
         "gear": ["battleaxe", "stone token"],
         "bonus": "lore",
-        "description": "Level 5 fighter with armor, stamina, and two attacks.",
+        "description": "A Dwarven Fighter with armor, stamina, and two attacks.",
     },
     "dm": {
         "name": "Jon",
@@ -67,7 +67,7 @@ CLASSES = {
         "supplies": 0,
         "gear": ["DM screen", "loaded d20"],
         "bonus": "fate",
-        "description": "Control the opening from above.",
+        "description": "A nicotine addicted God controlling the story from above.",
     },
 }
 
@@ -88,6 +88,90 @@ MONSTER_ATTACKS = {
 }
 
 THRONE_MAP_DIRECTIONS = ["left", "up", "right", "down"]
+BASE_LEVEL = 5
+BASE_XP_TO_NEXT = 100
+XP_PER_LEVEL = 50
+
+MONSTER_XP = {
+    "goblin": 20,
+    "orc": 35,
+    "ghoul": 25,
+    "gremlin": 20,
+    "mimic": 45,
+}
+
+MAJOR_DECISION_XP = {
+    "caravan_run": 20,
+    "forest_attempt": 10,
+    "choose_cave": 20,
+    "go_deeper": 15,
+    "ghost_choice": 20,
+    "doll_choice": 15,
+    "district_choice": 20,
+    "search": 15,
+    "residential_choice": 20,
+    "loot": 20,
+    "bridge": 25,
+}
+
+ACHIEVEMENTS = {
+    "first_fight": {
+        "name": "First Blood",
+        "description": "Win your first real fight.",
+    },
+    "ghost_ally": {
+        "name": "Tiny Terror",
+        "description": "Convince the ghost girl to fight for you.",
+    },
+    "group_kill": {
+        "name": "Crowd Control",
+        "description": "Achieve a group kill before the enemies can react.",
+    },
+    "lucky": {
+        "name": "Lucky",
+        "description": "Roll a natural 20.",
+    },
+    "unlucky": {
+        "name": "Unlucky",
+        "description": "Roll a natural 1.",
+    },
+    "forest_mind_break": {
+        "name": "Dazed and Confused",
+        "description": "Lose yourself by choosing the forest too many times.",
+    },
+    "ghost_slayer": {
+        "name": "Ghost Slayer",
+        "description": "Successfully drive off the ghost girl in a fight.",
+    },
+    "ghost_kiss": {
+        "name": "Not Your Goth Baddie",
+        "description": "Try to kiss the ghost girl.",
+    },
+    "pyromaniac": {
+        "name": "Pyromaniac",
+        "description": "Burn the suspiciously perfect house.",
+    },
+    "send_hydra": {
+        "name": "Fuck Dem Kids",
+        "description": "Send the hydra.",
+    },
+    "correct_chest_key": {
+        "name": "Keyed In",
+        "description": "Choose the correct key for the trapped chest.",
+    },
+    "trap_dodger": {
+        "name": "Light Feet",
+        "description": "Successfully avoid the bridge traps.",
+    },
+    "mimic_nap": {
+        "name": "Sleep Tight",
+        "description": "Choose to sleep in the mimic house.",
+    },
+    "played_everyone": {
+        "name": "Full Party",
+        "description": "Play each character once.",
+    },
+}
 
 class TalesOfVisteriaApp:
     def __init__(self, root):
@@ -97,6 +181,7 @@ class TalesOfVisteriaApp:
         self.root.minsize(960, 560)
         self.player = None
         self.pending_bridge = False
+        self.pending_level_callback = None
         self.combat = None
         self.game_over_image = None
         self.monsters = self.load_monsters()
@@ -165,6 +250,7 @@ class TalesOfVisteriaApp:
             takefocus=0,
         )
         self.story_text.grid(row=0, column=0, sticky="nsew")
+        self.story_text.tag_configure("story_center", justify="center")
         self.story_text.configure(state="disabled")
 
         scrollbar = tk.Scrollbar(story_frame, command=self.story_text.yview)
@@ -250,7 +336,7 @@ class TalesOfVisteriaApp:
         self.write(self.text(key, **values), clear=clear)
 
     def default_stats(self):
-        return {
+        stats = {
             key: {
                 "name": data["name"],
                 "runs": 0,
@@ -260,6 +346,8 @@ class TalesOfVisteriaApp:
             }
             for key, data in CLASSES.items()
         }
+        stats["_achievements"] = {}
+        return stats
 
     def load_stats(self):
         stats = self.default_stats()
@@ -271,6 +359,9 @@ class TalesOfVisteriaApp:
             for key, values in saved_stats.items():
                 if key in stats and isinstance(values, dict):
                     stats[key].update(values)
+            achievements = saved_stats.get("_achievements", {})
+            if isinstance(achievements, dict):
+                stats["_achievements"].update(achievements)
         return stats
 
     def save_stats(self):
@@ -284,6 +375,53 @@ class TalesOfVisteriaApp:
             return
         self.stats[character_class][stat_name] += 1
         self.save_stats()
+
+    def unlock_achievement(self, achievement_id):
+        if achievement_id not in ACHIEVEMENTS:
+            return
+        unlocked = self.stats.setdefault("_achievements", {})
+        if achievement_id in unlocked:
+            return
+
+        unlocked[achievement_id] = True
+        self.save_stats()
+        achievement = ACHIEVEMENTS[achievement_id]
+        self.write_text(
+            "ui.achievement_unlocked",
+            name=achievement["name"],
+            description=achievement["description"],
+        )
+        self.refresh_side_panels()
+
+    def check_played_everyone_achievement(self):
+        if all(self.stats.get(character_class, {}).get("runs", 0) > 0 for character_class in CLASSES):
+            self.unlock_achievement("played_everyone")
+
+    def achievements_summary(self):
+        lines = [self.text("ui.achievements_heading")]
+        unlocked = self.stats.get("_achievements", {})
+        visible = [achievement_id for achievement_id in ACHIEVEMENTS if unlocked.get(achievement_id)]
+        lines.append(
+            self.text(
+                "ui.achievements_progress",
+                unlocked=len(visible),
+                total=len(ACHIEVEMENTS),
+            )
+        )
+        if not visible:
+            lines.append(self.text("ui.no_achievements"))
+            return lines
+
+        for achievement_id in visible:
+            achievement = ACHIEVEMENTS[achievement_id]
+            lines.append(
+                self.text(
+                    "ui.achievement_line",
+                    name=achievement["name"],
+                    description=achievement["description"],
+                )
+            )
+        return lines
 
     def stats_summary(self):
         lines = [self.text("ui.stats_heading")]
@@ -299,19 +437,26 @@ class TalesOfVisteriaApp:
                     forest_attempts=stats.get("forest_attempts", 0),
                 )
             )
+        lines.extend(["", *self.achievements_summary()])
         return "\n".join(lines)
 
     def character_sheet_text(self):
         if not self.player:
             return "No character selected.\n\nStart a new game or load a save."
 
-        stats = PLAYER_COMBAT_STATS[self.player["class"]]
+        stats = self.player_combat_stats()
+        xp = self.player.get("experience", 0)
+        xp_to_next = self.player.get("xp_to_next", BASE_XP_TO_NEXT)
+        filled = 0 if xp_to_next <= 0 else min(20, int((xp / xp_to_next) * 20))
+        xp_bar = "[" + "#" * filled + "-" * (20 - filled) + "]"
         lines = [
             "Trait              Value",
             "-" * 30,
             f"Name               {self.player['name']}",
             f"Class              {self.player['title']}",
-            "Level              5" if self.player["class"] != "dm" else "Level              DM",
+            f"Level              {self.player.get('level', BASE_LEVEL)}" if self.player["class"] != "dm" else "Level              DM",
+            f"Experience         {xp}/{xp_to_next}",
+            f"XP Progress        {xp_bar}",
             f"HP                 {self.player['health']}/{self.player['max_health']}",
             f"AC                 {stats['ac']}",
             f"Attack Bonus       +{stats['attack_bonus']}",
@@ -400,6 +545,7 @@ class TalesOfVisteriaApp:
             lines.append("Girl hint: barracks / merchant district")
         if flags.get("monsters_scattered"):
             lines.append("Orcs and goblins scattered by the pale girl")
+        lines.extend(["", *self.achievements_summary()])
         return "\n".join(lines)
 
     def refresh_side_panels(self):
@@ -412,7 +558,9 @@ class TalesOfVisteriaApp:
         self.story_text.configure(state="normal")
         if clear:
             self.story_text.delete("1.0", "end")
-        self.story_text.insert("end", text.strip() + "\n\n")
+        elif self.story_text.get("1.0", "end-1c").strip():
+            self.story_text.insert("end", "------------------------------\n\n", "story_center")
+        self.story_text.insert("end", text.strip() + "\n\n", "story_center")
         self.story_text.see("end")
         self.story_text.configure(state="disabled")
 
@@ -519,6 +667,13 @@ class TalesOfVisteriaApp:
             "supplies": template["supplies"],
             "gear": list(template["gear"]),
             "bonus": template["bonus"],
+            "level": BASE_LEVEL,
+            "experience": 0,
+            "xp_to_next": BASE_XP_TO_NEXT,
+            "upgrades": {
+                "ac": 0,
+                "damage": 0,
+            },
             "chapter": "dm_intro" if character_class == "dm" else "caravan",
             "flags": {
                 "forest_attempts": 0,
@@ -541,11 +696,18 @@ class TalesOfVisteriaApp:
         self.record_stat("runs")
         self.update_status()
         self.continue_chapter(clear=True)
+        self.check_played_everyone_achievement()
 
     def ensure_player_defaults(self, player):
         if player.get("class") in CLASSES:
             player["title"] = CLASSES[player["class"]]["title"]
             player.setdefault("max_health", CLASSES[player["class"]]["health"])
+        player.setdefault("level", BASE_LEVEL)
+        player.setdefault("experience", 0)
+        player.setdefault("xp_to_next", BASE_XP_TO_NEXT + max(0, player["level"] - BASE_LEVEL) * XP_PER_LEVEL)
+        upgrades = player.setdefault("upgrades", {})
+        upgrades.setdefault("ac", 0)
+        upgrades.setdefault("damage", 0)
         flags = player.setdefault("flags", {})
         flags.setdefault("forest_attempts", 0)
         flags.setdefault("girl_helped", False)
@@ -596,9 +758,17 @@ class TalesOfVisteriaApp:
 
     def roll_d20(self, skill):
         bonus = 2 if self.player["bonus"] == skill else 0
-        result = random.randint(1, 20) + bonus
+        natural = random.randint(1, 20)
+        self.track_natural_roll(natural)
+        result = natural + bonus
         self.write_text("ui.roll", result=result)
         return result
+
+    def track_natural_roll(self, natural):
+        if natural == 20:
+            self.unlock_achievement("lucky")
+        elif natural == 1:
+            self.unlock_achievement("unlucky")
 
     def roll(self, skill, difficulty):
         result = self.roll_d20(skill)
@@ -653,6 +823,8 @@ class TalesOfVisteriaApp:
             self.dm_intro(clear)
         elif chapter == "dm_ghost":
             self.dm_ghost(clear)
+        elif chapter == "dm_districts":
+            self.dm_districts(clear)
         elif chapter == "caravan":
             self.caravan(clear)
         elif chapter == "escape":
@@ -692,6 +864,7 @@ class TalesOfVisteriaApp:
         if choice == "hydra":
             self.show_monsters(["Hydra"])
             self.write_text("story.dm_send_hydra")
+            self.unlock_achievement("send_hydra")
             self.set_game_over_reason("hydra")
             self.player["health"] = 0
             self.check_death()
@@ -727,10 +900,182 @@ class TalesOfVisteriaApp:
 
     def dm_watch(self, choice):
         roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
         result_key = "low" if roll <= 10 else "high"
         self.write_text("story.dm_watch_result", roll=roll, result=self.text(f"story.dm_watch_{choice}_{result_key}"))
+        self.write_text("story.dm_watch_continue")
+        self.player["chapter"] = "dm_districts"
+        self.set_choices([(self.text("choice.keep_watching"), self.dm_districts)])
+
+    def dm_districts(self, clear=False):
+        self.write_text("story.dm_districts", clear=clear)
+        self.set_choices(
+            [
+                (self.text("choice.dm_barracks"), self.dm_barracks),
+                (self.text("choice.dm_merchant"), self.dm_merchant),
+            ]
+        )
+
+    def dm_barracks(self):
+        self.write_text("story.dm_barracks")
+        self.set_choices(
+            [
+                (self.text("choice.dm_barracks_armory"), self.dm_barracks_armory),
+                (self.text("choice.dm_barracks_quarters"), self.dm_barracks_quarters),
+                (self.text("choice.dm_barracks_combat"), self.dm_barracks_combat),
+            ]
+        )
+
+    def dm_barracks_armory(self):
+        roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
+        result_key = "low" if roll <= 10 else "high"
+        self.write_text("story.dm_barracks_armory", roll=roll, result=self.text(f"story.dm_barracks_armory_{result_key}"))
+        self.set_choices([(self.text("choice.roll_loot"), self.dm_barracks_loot)])
+
+    def dm_barracks_quarters(self):
+        roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
+        result_key = "low" if roll <= 10 else "high"
+        self.write_text("story.dm_barracks_quarters", roll=roll, result=self.text(f"story.dm_barracks_quarters_{result_key}"))
+        self.set_choices([(self.text("choice.roll_loot"), self.dm_barracks_loot)])
+
+    def dm_barracks_combat(self):
+        self.write_text("story.dm_barracks_combat")
+        self.set_choices([(self.text("choice.loot_bodies"), self.dm_barracks_map)])
+
+    def dm_barracks_loot(self):
+        roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
+        if roll <= 7:
+            result_key = "low"
+        elif roll <= 14:
+            result_key = "mid"
+        else:
+            result_key = "high"
+        self.write_text("story.dm_barracks_loot", roll=roll, result=self.text(f"story.dm_barracks_loot_{result_key}"))
+        if roll > 14:
+            self.set_choices([(self.text("choice.read_map"), self.dm_barracks_map)])
+        else:
+            self.set_choices([(self.text("choice.move_houses"), self.dm_residential)])
+
+    def dm_barracks_map(self):
+        self.write_text("story.dm_barracks_map")
+        self.set_choices([(self.text("choice.move_houses"), self.dm_residential)])
+
+    def dm_merchant(self):
+        self.write_text("story.dm_merchant")
+        self.set_choices(
+            [
+                (self.text("choice.dm_merchant_shop"), self.dm_merchant_shop),
+                (self.text("choice.dm_merchant_sneak"), self.dm_merchant_sneak),
+                (self.text("choice.dm_merchant_combat"), self.dm_merchant_combat),
+            ]
+        )
+
+    def dm_merchant_shop(self):
+        roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
+        result_key = "low" if roll <= 10 else "high"
+        self.write_text("story.dm_merchant_shop", roll=roll, result=self.text(f"story.dm_merchant_shop_{result_key}"))
+        if roll <= 10:
+            self.set_choices([(self.text("choice.make_fight"), self.dm_merchant_combat)])
+        else:
+            self.set_choices([(self.text("choice.roll_loot"), self.dm_merchant_loot)])
+
+    def dm_merchant_sneak(self):
+        roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
+        result_key = "low" if roll <= 16 else "high"
+        self.write_text("story.dm_merchant_sneak", roll=roll, result=self.text(f"story.dm_merchant_sneak_{result_key}"))
+        if roll <= 16:
+            self.set_choices([(self.text("choice.make_fight"), self.dm_merchant_combat)])
+        else:
+            self.set_choices([(self.text("choice.move_houses"), self.dm_residential)])
+
+    def dm_merchant_combat(self):
+        self.write_text("story.dm_merchant_combat")
+        self.set_choices([(self.text("choice.loot_bodies"), self.dm_merchant_map)])
+
+    def dm_merchant_loot(self):
+        roll = random.randint(1, 20)
+        self.track_natural_roll(roll)
+        if roll <= 7:
+            result_key = "low"
+        elif roll <= 14:
+            result_key = "mid"
+        else:
+            result_key = "high"
+        self.write_text("story.dm_merchant_loot", roll=roll, result=self.text(f"story.dm_merchant_loot_{result_key}"))
+        if roll > 14:
+            self.set_choices([(self.text("choice.read_map"), self.dm_merchant_map)])
+        else:
+            self.set_choices([(self.text("choice.move_houses"), self.dm_residential)])
+
+    def dm_merchant_map(self):
+        self.write_text("story.dm_merchant_map")
+        self.set_choices([(self.text("choice.move_houses"), self.dm_residential)])
+
+    def dm_residential(self):
+        self.write_text("story.dm_residential")
+        self.set_choices(
+            [
+                (self.text("choice.dm_manor"), self.dm_manor),
+                (self.text("choice.dm_shack"), self.dm_shack),
+                (self.text("choice.dm_mimic_house"), self.dm_mimic_house),
+                (self.text("choice.dm_bridge"), self.dm_bridge),
+            ]
+        )
+
+    def dm_manor(self):
+        self.write_text("story.dm_manor")
+        self.set_choices(
+            [
+                (self.text("choice.dm_manor_orb"), self.dm_manor_orb),
+                (self.text("choice.dm_manor_boom"), self.dm_manor_boom),
+                (self.text("choice.dm_bridge"), self.dm_bridge),
+            ]
+        )
+
+    def dm_manor_orb(self):
+        self.write_text("story.dm_manor_orb")
+        self.set_choices([(self.text("choice.move_bridge"), self.dm_bridge)])
+
+    def dm_manor_boom(self):
+        self.write_text("story.dm_manor_boom")
+        self.set_choices([(self.text("choice.rewind"), self.dm_residential)])
+
+    def dm_shack(self):
+        self.write_text("story.dm_shack")
+        self.set_choices([(self.text("choice.move_bridge"), self.dm_bridge)])
+
+    def dm_mimic_house(self):
+        self.write_text("story.dm_mimic_house")
+        self.set_choices(
+            [
+                (self.text("choice.dm_mimic_burn"), self.dm_mimic_burn),
+                (self.text("choice.dm_bridge"), self.dm_bridge),
+                (self.text("choice.dm_mimic_loot"), self.dm_mimic_loot),
+                (self.text("choice.dm_mimic_rest"), self.dm_mimic_rest),
+            ]
+        )
+
+    def dm_mimic_burn(self):
+        self.write_text("story.dm_mimic_burn")
+        self.set_choices([(self.text("choice.move_bridge"), self.dm_bridge)])
+
+    def dm_mimic_loot(self):
+        self.write_text("story.dm_mimic_loot")
+        self.set_choices([(self.text("choice.drag_out"), self.dm_bridge)])
+
+    def dm_mimic_rest(self):
+        self.write_text("story.dm_mimic_rest")
+        self.set_choices([(self.text("choice.rewind"), self.dm_mimic_house)])
+
+    def dm_bridge(self):
+        self.write_text("story.dm_bridge")
         self.player["chapter"] = "complete"
-        self.continue_chapter()
+        self.set_choices([(self.text("choice.chapter_complete"), self.complete)])
 
     def caravan(self, clear=False):
         self.write_text("story.caravan", clear=clear)
@@ -747,14 +1092,40 @@ class TalesOfVisteriaApp:
     def caravan_choice(self, choice):
         if choice == "fight":
             self.write_text("story.caravan_fight")
-            self.player["health"] -= 3
-            self.add_item("notched axe")
+            self.start_combat(
+                ["orc", "goblin", "goblin"],
+                "story.caravan_combat_victory",
+                attackers_per_round=2,
+                victory_callback=self.caravan_combat_done,
+                run_callback=self.caravan_combat_run,
+                award_map=False,
+            )
+            return
         else:
             self.write_text("story.caravan_run")
             self.player["supplies"] += 1
 
         if self.check_death():
             return
+        if self.award_decision_experience("caravan_run", self.caravan_escape_done):
+            return
+        self.caravan_escape_done()
+
+    def caravan_escape_done(self):
+        self.write_text("story.caravan_overrun")
+        self.player["chapter"] = "escape"
+        self.continue_chapter()
+
+    def caravan_combat_done(self):
+        self.unlock_achievement("first_fight")
+        self.add_item("notched axe")
+        self.write_text("story.caravan_overrun")
+        self.player["chapter"] = "escape"
+        self.continue_chapter()
+
+    def caravan_combat_run(self):
+        self.write_text("story.caravan_run")
+        self.player["supplies"] += 1
         self.write_text("story.caravan_overrun")
         self.player["chapter"] = "escape"
         self.continue_chapter()
@@ -776,16 +1147,24 @@ class TalesOfVisteriaApp:
             self.record_stat("forest_attempts")
             self.write_text("story.escape_forest")
             if self.player["flags"]["forest_attempts"] > 5:
+                self.unlock_achievement("forest_mind_break")
                 self.set_game_over_reason("forest_mind_break")
                 self.player["health"] = 0
                 self.check_death()
                 return
             if self.player["flags"]["forest_attempts"] >= 2:
                 self.write_text("story.escape_forest_repeat")
+            if self.award_decision_experience("forest_attempt", self.escape):
+                return
             self.escape()
             return
 
         self.write_text("story.escape_cave")
+        if self.award_decision_experience("choose_cave", self.enter_cave):
+            return
+        self.enter_cave()
+
+    def enter_cave(self):
         self.player["chapter"] = "cave"
         self.continue_chapter()
 
@@ -801,19 +1180,36 @@ class TalesOfVisteriaApp:
 
     def cave_choice(self, choice):
         if choice == "fight":
-            if self.roll("combat", 13):
-                self.write_text("story.cave_fight_success")
-                self.player["gold"] += 4
-            else:
-                self.write_text("story.cave_fight_fail")
-                self.player["health"] -= 4
-                if self.player["health"] <= 0:
-                    self.set_game_over_reason("combat")
+            self.write_text("story.cave_fight_start")
+            self.start_combat(
+                ["goblin", "goblin"],
+                "story.cave_fight_success",
+                attackers_per_round=2,
+                victory_callback=self.cave_combat_done,
+                run_callback=self.cave_combat_run,
+                award_map=False,
+            )
+            return
         else:
             self.write_text("story.cave_deeper")
 
         if self.check_death():
             return
+        if self.award_decision_experience("go_deeper", self.enter_ghost):
+            return
+        self.enter_ghost()
+
+    def enter_ghost(self):
+        self.player["chapter"] = "ghost"
+        self.continue_chapter()
+
+    def cave_combat_done(self):
+        self.player["gold"] += 4
+        self.player["chapter"] = "ghost"
+        self.continue_chapter()
+
+    def cave_combat_run(self):
+        self.write_text("story.cave_deeper")
         self.player["chapter"] = "ghost"
         self.continue_chapter()
 
@@ -838,6 +1234,11 @@ class TalesOfVisteriaApp:
 
         if self.check_death():
             return
+        if self.award_decision_experience("ghost_choice", lambda: self.finish_ghost_choice(next_step)):
+            return
+        self.finish_ghost_choice(next_step)
+
+    def finish_ghost_choice(self, next_step):
         if next_step == "districts":
             self.player["chapter"] = "districts"
             self.continue_chapter()
@@ -862,6 +1263,7 @@ class TalesOfVisteriaApp:
         self.write_text("story.persuade_high")
         self.player["flags"]["girl_helped"] = True
         self.player["flags"]["monsters_scattered"] = True
+        self.unlock_achievement("ghost_ally")
         return "districts"
 
     def ghost_black_pits_death(self):
@@ -888,6 +1290,7 @@ class TalesOfVisteriaApp:
         elif character_class == "scholar":
             self.write_text("story.fight_girl_scholar")
             self.player["health"] -= 3
+            self.unlock_achievement("ghost_slayer")
             return self.ghost_black_miasma()
         elif character_class == "ranger":
             self.write_text("story.fight_girl_ranger")
@@ -895,6 +1298,7 @@ class TalesOfVisteriaApp:
 
         elif character_class == "dwarf":
             self.write_text("story.fight_girl_dwarf")
+            self.unlock_achievement("ghost_kiss")
             return self.ghost_black_pits_death()
 
         return self.ghost_black_miasma()
@@ -920,6 +1324,13 @@ class TalesOfVisteriaApp:
             self.player["flags"]["has_doll"] = True
         else:
             self.write_text("story.doll_leave")
+            self.add_item("cracked doll")
+            self.player["flags"]["has_doll"] = True
+        if self.award_decision_experience("doll_choice", self.enter_districts):
+            return
+        self.enter_districts()
+
+    def enter_districts(self):
         self.player["chapter"] = "districts"
         self.continue_chapter()
 
@@ -953,6 +1364,8 @@ class TalesOfVisteriaApp:
         else:
             self.award_throne_map()
         self.update_status()
+        if self.award_decision_experience("search", self.route_choice_done):
+            return
         self.route_choice_done()
 
     def award_throne_map(self):
@@ -982,9 +1395,13 @@ class TalesOfVisteriaApp:
         victory_text,
         attackers_per_round=1,
         victory_callback=None,
+        run_callback=None,
         award_map=True,
         death_reason="combat",
+        xp_reward=None,
     ):
+        if xp_reward is None:
+            xp_reward = sum(MONSTER_XP.get(enemy.lower(), 15) for enemy in enemies)
         self.combat = {
             "enemies": [
                 self.make_enemy(monster_name, index + 1)
@@ -994,8 +1411,10 @@ class TalesOfVisteriaApp:
             "guarding": False,
             "attackers_per_round": attackers_per_round,
             "victory_callback": victory_callback,
+            "run_callback": run_callback,
             "award_map": award_map,
             "death_reason": death_reason,
+            "xp_reward": xp_reward,
         }
         self.write_text("ui.initiate_combat")
         self.show_monsters(sorted(set(enemies)))
@@ -1028,7 +1447,82 @@ class TalesOfVisteriaApp:
         self.set_choices(choices)
 
     def player_combat_stats(self):
-        return PLAYER_COMBAT_STATS[self.player["class"]]
+        stats = dict(PLAYER_COMBAT_STATS[self.player["class"]])
+        upgrades = self.player.get("upgrades", {})
+        stats["ac"] += upgrades.get("ac", 0)
+        stats["damage_bonus"] += upgrades.get("damage", 0)
+        return stats
+
+    def next_xp_threshold(self, level):
+        return BASE_XP_TO_NEXT + max(0, level - BASE_LEVEL) * XP_PER_LEVEL
+
+    def award_experience(self, amount, reason_key, after_level_callback=None):
+        if not self.player or self.player["class"] == "dm" or amount <= 0:
+            return False
+
+        self.player["experience"] = self.player.get("experience", 0) + amount
+        self.write_text("story.xp_gain", amount=amount, reason=self.text(reason_key))
+        self.update_status()
+
+        if self.player["experience"] >= self.player.get("xp_to_next", BASE_XP_TO_NEXT):
+            self.pending_level_callback = after_level_callback
+            self.show_level_up_choices()
+            return True
+        return False
+
+    def award_decision_experience(self, decision_key, after_level_callback=None):
+        return self.award_experience(
+            MAJOR_DECISION_XP.get(decision_key, 10),
+            f"xp.reason.{decision_key}",
+            after_level_callback,
+        )
+
+    def show_level_up_choices(self):
+        self.write_text("story.level_up", level=self.player.get("level", BASE_LEVEL) + 1)
+        self.set_choices(
+            [
+                (self.text("choice.level_hp"), lambda: self.apply_level_choice("hp")),
+                (self.text("choice.level_ac"), lambda: self.apply_level_choice("ac")),
+                (self.text("choice.level_damage"), lambda: self.apply_level_choice("damage")),
+                (self.text("choice.level_heal"), lambda: self.apply_level_choice("heal")),
+            ]
+        )
+
+    def apply_level_choice(self, choice):
+        current_threshold = self.player.get("xp_to_next", BASE_XP_TO_NEXT)
+        self.player["experience"] = max(0, self.player.get("experience", 0) - current_threshold)
+        self.player["level"] = self.player.get("level", BASE_LEVEL) + 1
+        self.player["xp_to_next"] = self.next_xp_threshold(self.player["level"])
+        self.player["max_health"] += 2
+        self.player["health"] += 2
+
+        if choice == "hp":
+            self.player["max_health"] += 8
+            self.player["health"] += 8
+            self.write_text("story.level_hp")
+        elif choice == "ac":
+            self.player.setdefault("upgrades", {}).setdefault("ac", 0)
+            self.player["upgrades"]["ac"] += 1
+            self.write_text("story.level_ac")
+        elif choice == "damage":
+            self.player.setdefault("upgrades", {}).setdefault("damage", 0)
+            self.player["upgrades"]["damage"] += 1
+            self.write_text("story.level_damage")
+        else:
+            self.player["health"] = self.player["max_health"]
+            self.write_text("story.level_heal")
+
+        self.update_status()
+        callback = self.pending_level_callback
+        self.pending_level_callback = None
+
+        if self.player["experience"] >= self.player["xp_to_next"]:
+            self.pending_level_callback = callback
+            self.show_level_up_choices()
+            return
+
+        if callback:
+            callback()
 
     def combat_action(self, action):
         if action == "potion":
@@ -1045,8 +1539,12 @@ class TalesOfVisteriaApp:
             roll = self.roll_d20("sneak")
             if roll >= 12:
                 self.write_text("story.combat_run_success")
+                run_callback = self.combat.get("run_callback")
                 self.combat = None
-                self.route_choice_done()
+                if run_callback:
+                    run_callback()
+                else:
+                    self.route_choice_done()
                 return
             self.write_text("story.combat_run_fail")
             self.enemy_combat_turn()
@@ -1075,16 +1573,21 @@ class TalesOfVisteriaApp:
 
             enemy = living[0]
             attack_roll = random.randint(1, 20)
+            self.track_natural_roll(attack_roll)
             total = attack_roll + attack_bonus
             self.write_text(
                 "story.combat_attack_roll",
                 attack_number=attack_number,
+                natural=attack_roll,
+                bonus=attack_bonus,
                 total=total,
                 enemy=enemy["name"],
                 ac=enemy["ac"],
             )
 
-            if attack_roll == 20 or total >= enemy["ac"]:
+            if attack_roll == 1:
+                self.write_text("story.combat_miss")
+            elif attack_roll == 20 or total >= enemy["ac"]:
                 damage = random.randint(1, damage_die) + damage_bonus
                 if attack_roll == 20:
                     damage += random.randint(1, damage_die)
@@ -1113,14 +1616,16 @@ class TalesOfVisteriaApp:
             attack = self.monster_attack_stats(enemy["base_name"])
             roll = random.randint(1, 20)
             total = roll + attack["attack_bonus"]
-            if roll == 20 or total >= player_ac:
+            if roll == 1:
+                self.write_text("story.enemy_miss", enemy=enemy["name"], natural=roll, total=total, ac=player_ac)
+            elif roll == 20 or total >= player_ac:
                 damage = random.randint(1, attack["damage_die"]) + attack["damage_bonus"]
                 if roll == 20:
                     damage += random.randint(1, attack["damage_die"])
                 self.player["health"] -= damage
-                self.write_text("story.enemy_hit", enemy=enemy["name"], damage=damage)
+                self.write_text("story.enemy_hit", enemy=enemy["name"], natural=roll, total=total, ac=player_ac, damage=damage)
             else:
-                self.write_text("story.enemy_miss", enemy=enemy["name"])
+                self.write_text("story.enemy_miss", enemy=enemy["name"], natural=roll, total=total, ac=player_ac)
 
         self.combat["guarding"] = False
         if self.player["health"] <= 0:
@@ -1134,11 +1639,18 @@ class TalesOfVisteriaApp:
         victory_text = self.combat["victory_text"]
         victory_callback = self.combat.get("victory_callback")
         award_map = self.combat.get("award_map", True)
+        xp_reward = self.combat.get("xp_reward", 0)
         self.combat = None
         self.write_text(victory_text)
+        after_xp = victory_callback or (lambda: self.combat_default_victory_done(award_map=award_map))
+        if self.award_experience(xp_reward, "xp.reason.combat", after_xp):
+            return
         if victory_callback:
             victory_callback()
             return
+        self.combat_default_victory_done(award_map=award_map)
+
+    def combat_default_victory_done(self, award_map=True):
         if award_map:
             self.write_text("story.combat_loot_map")
             self.award_throne_map()
@@ -1151,12 +1663,21 @@ class TalesOfVisteriaApp:
             [
                 (self.text("choice.barracks"), self.barracks),
                 (self.text("choice.merchant_district"), self.city_district),
+                (self.text("choice.rest"), self.rest_at_districts),
                 (self.text("choice.save"), self.save_game),
                 (self.text("choice.main_menu"), self.show_start_screen),
             ]
         )
 
-    def city_district(self):
+    def rest_at_districts(self):
+        self.player["health"] = self.player["max_health"]
+        self.write_text("story.districts_rest")
+        self.update_status()
+        self.districts()
+
+    def city_district(self, award=True):
+        if award and self.award_decision_experience("district_choice", lambda: self.city_district(award=False)):
+            return
         self.write_text("story.city_enter")
         if self.player["flags"]["girl_hint"] in ("barracks_city", "merchant_glowy_ball"):
             self.write_text("story.city_girl_hint")
@@ -1166,7 +1687,7 @@ class TalesOfVisteriaApp:
             [
                 (self.text("choice.sneak_shop"), lambda: self.city_result("shop")),
                 (self.text("choice.assault_monsters"), lambda: self.city_result("assault")),
-                (self.text("choice.sneak_past"), lambda: self.city_result("sneak")),
+                (self.text("choice.sneak_past_monsters"), lambda: self.city_result("sneak")),
             ]
         )
 
@@ -1200,7 +1721,9 @@ class TalesOfVisteriaApp:
             attackers_per_round=1,
         )
 
-    def barracks(self):
+    def barracks(self, award=True):
+        if award and self.award_decision_experience("district_choice", lambda: self.barracks(award=False)):
+            return
         self.write_text("story.barracks_enter")
         if self.player["flags"]["girl_hint"] == "barracks_city":
             self.write_text("story.barracks_girl_hint")
@@ -1251,7 +1774,8 @@ class TalesOfVisteriaApp:
         self.continue_chapter()
 
     def residential_area(self, clear=False):
-        self.write_text("story.residential", clear=clear)
+        self.write_text("story.residential_enter", clear=clear)
+        self.write_text("story.residential")
         self.set_choices(
             [
                 (self.text("choice.large_manor"), self.large_manor),
@@ -1261,11 +1785,15 @@ class TalesOfVisteriaApp:
             ]
         )
 
-    def go_to_bridge(self):
+    def go_to_bridge(self, award=True):
+        if award and self.award_decision_experience("bridge", lambda: self.go_to_bridge(award=False)):
+            return
         self.player["chapter"] = "bridge"
         self.continue_chapter()
 
-    def large_manor(self):
+    def large_manor(self, award=True):
+        if award and self.award_decision_experience("residential_choice", lambda: self.large_manor(award=False)):
+            return
         self.write_text("story.large_manor")
         roll = self.roll_d20("sneak")
         if roll <= 14:
@@ -1296,6 +1824,10 @@ class TalesOfVisteriaApp:
 
     def manor_group_kill(self):
         self.write_text(f"story.manor_group_kill_{self.player['class']}")
+        self.unlock_achievement("group_kill")
+        xp_reward = (MONSTER_XP["goblin"] * 5) + (MONSTER_XP["orc"] * 2)
+        if self.award_experience(xp_reward, "xp.reason.combat", self.manor_win):
+            return
         self.manor_win()
 
     def manor_combat(self):
@@ -1354,6 +1886,7 @@ class TalesOfVisteriaApp:
             return
 
         self.write_text("story.manor_chest_unlock")
+        self.unlock_achievement("correct_chest_key")
         self.set_choices([(self.text("choice.open_chest"), self.manor_magistone_orb)])
 
     def manor_magistone_orb(self):
@@ -1362,7 +1895,9 @@ class TalesOfVisteriaApp:
         self.write_text("story.manor_magistone_orb")
         self.set_choices([(self.text("choice.leave_house"), self.go_to_bridge)])
 
-    def small_shack(self):
+    def small_shack(self, award=True):
+        if award and self.award_decision_experience("residential_choice", lambda: self.small_shack(award=False)):
+            return
         self.write_text("story.small_shack")
         self.show_monsters(["Gremlin", "Ghoul"])
         self.start_combat(
@@ -1381,7 +1916,9 @@ class TalesOfVisteriaApp:
             ]
         )
 
-    def mimic_house(self):
+    def mimic_house(self, award=True):
+        if award and self.award_decision_experience("residential_choice", lambda: self.mimic_house(award=False)):
+            return
         self.write_text("story.mimic_house")
         self.set_choices(
             [
@@ -1394,12 +1931,8 @@ class TalesOfVisteriaApp:
 
     def mimic_house_burn(self):
         self.write_text("story.mimic_house_burn")
-        self.set_choices(
-            [
-                (self.text("choice.fight_mimic_house"), self.mimic_house_fight_one),
-                (self.text("choice.try_flee"), self.mimic_house_flee),
-            ]
-        )
+        self.unlock_achievement("pyromaniac")
+        self.set_choices([(self.text("choice.leave_house"), self.go_to_bridge)])
 
     def mimic_house_leave(self):
         self.write_text("story.mimic_house_leave")
@@ -1408,15 +1941,12 @@ class TalesOfVisteriaApp:
     def mimic_house_loot(self):
         self.show_monsters(["Mimic"])
         self.write_text("story.mimic_house_loot")
-        self.set_choices(
-            [
-                (self.text("choice.fight_mimic"), self.mimic_house_fight_one),
-                (self.text("choice.if_eaten"), self.mimic_game_over),
-            ]
-        )
+        self.write_text("story.mimic_house_loot_clear")
+        self.mimic_house_fight_one()
 
     def mimic_house_rest(self):
         self.write_text("story.mimic_house_rest")
+        self.unlock_achievement("mimic_nap")
         self.mimic_game_over()
 
     def mimic_house_fight_one(self):
@@ -1454,6 +1984,8 @@ class TalesOfVisteriaApp:
         if not self.player["flags"]["has_partial_map"]:
             self.player["flags"]["has_partial_map"] = True
             self.add_item("torn bridge map")
+        self.player["flags"]["has_magistone_orb"] = True
+        self.add_item("magistone orb")
         self.write_text("story.mimic_house_escape")
         self.set_choices([(self.text("choice.proceed_bridge"), self.go_to_bridge)])
 
@@ -1579,6 +2111,7 @@ class TalesOfVisteriaApp:
             return
 
         self.write_text("story.bridge_success")
+        self.unlock_achievement("trap_dodger")
         self.cross_bridge("cross")
 
     def production_area(self, clear=False):
