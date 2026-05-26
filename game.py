@@ -82,6 +82,9 @@ PLAYER_COMBAT_STATS = {
 MONSTER_ATTACKS = {
     "orc": {"attack_bonus": 5, "damage_die": 12, "damage_bonus": 3},
     "goblin": {"attack_bonus": 4, "damage_die": 6, "damage_bonus": 2},
+    "ghoul": {"attack_bonus": 4, "damage_die": 6, "damage_bonus": 2},
+    "gremlin": {"attack_bonus": 4, "damage_die": 6, "damage_bonus": 1},
+    "mimic": {"attack_bonus": 5, "damage_die": 8, "damage_bonus": 3},
 }
 
 THRONE_MAP_DIRECTIONS = ["left", "up", "right", "down"]
@@ -325,7 +328,16 @@ class TalesOfVisteriaApp:
             lines.append("- none")
 
         inventory = []
-        for item in ("health potion", "cracked doll", "throne room map", "dwarven ale", "magistone orb"):
+        for item in (
+            "health potion",
+            "cracked doll",
+            "throne room map",
+            "torn bridge map",
+            "dwarven ale",
+            "unmarked keys",
+            "small black chest",
+            "magistone orb",
+        ):
             if item in self.player["gear"]:
                 inventory.append(item)
         if not inventory:
@@ -373,15 +385,17 @@ class TalesOfVisteriaApp:
             "-" * 30,
             checked("Survive Visteria", chapter == "complete"),
             checked("Find the throne map", flags.get("has_throne_map", False)),
+            checked("Find partial bridge directions", flags.get("has_partial_map", False)),
             checked("Remember bridge directions", flags.get("has_throne_map", False)),
             checked("Carry the cracked doll", flags.get("has_doll", False)),
+            checked("Recover the magistone orb", flags.get("has_magistone_orb", False)),
             "",
             "Session Notes",
             "-" * 30,
             f"Forest attempts: {flags.get('forest_attempts', 0)}/5",
         ]
-        if flags.get("girl_hint") == "barracks_glowing_ball":
-            lines.append('Girl hint: pointy sticks / "glowing ball"')
+        if flags.get("girl_hint") == "merchant_glowy_ball":
+            lines.append('Girl hint: "fun glowy ball" in the merchant district')
         elif flags.get("girl_hint"):
             lines.append("Girl hint: barracks / merchant district")
         if flags.get("monsters_scattered"):
@@ -515,6 +529,11 @@ class TalesOfVisteriaApp:
                 "girl_hint": "",
                 "monsters_scattered": False,
                 "has_throne_map": False,
+                "has_partial_map": False,
+                "has_dwarven_ale": False,
+                "has_manor_keys": False,
+                "has_black_chest": False,
+                "has_magistone_orb": False,
                 "death_recorded": False,
                 "completed_recorded": False,
             },
@@ -536,6 +555,11 @@ class TalesOfVisteriaApp:
         flags.setdefault("girl_hint", "")
         flags.setdefault("monsters_scattered", False)
         flags.setdefault("has_throne_map", False)
+        flags.setdefault("has_partial_map", False)
+        flags.setdefault("has_dwarven_ale", False)
+        flags.setdefault("has_manor_keys", False)
+        flags.setdefault("has_black_chest", False)
+        flags.setdefault("has_magistone_orb", False)
         flags.setdefault("death_recorded", False)
         flags.setdefault("completed_recorded", False)
 
@@ -832,7 +856,7 @@ class TalesOfVisteriaApp:
         elif result <= 15:
             self.write_text("story.persuade_mid")
             self.player["flags"]["girl_helped"] = True
-            self.player["flags"]["girl_hint"] = "barracks_glowing_ball"
+            self.player["flags"]["girl_hint"] = "merchant_glowy_ball"
             return "doll"
 
         self.write_text("story.persuade_high")
@@ -919,6 +943,8 @@ class TalesOfVisteriaApp:
             if area == "city":
                 self.write_text("story.search_city_low")
                 self.player["gold"] += 3
+                self.player["flags"]["has_dwarven_ale"] = True
+                self.add_item("dwarven ale")
             else:
                 self.write_text("story.search_empty")
         elif roll <= 14:
@@ -950,7 +976,15 @@ class TalesOfVisteriaApp:
             "hp": int(monster.get("hp", 6)),
         }
 
-    def start_combat(self, enemies, victory_text, attackers_per_round=1):
+    def start_combat(
+        self,
+        enemies,
+        victory_text,
+        attackers_per_round=1,
+        victory_callback=None,
+        award_map=True,
+        death_reason="combat",
+    ):
         self.combat = {
             "enemies": [
                 self.make_enemy(monster_name, index + 1)
@@ -959,6 +993,9 @@ class TalesOfVisteriaApp:
             "victory_text": victory_text,
             "guarding": False,
             "attackers_per_round": attackers_per_round,
+            "victory_callback": victory_callback,
+            "award_map": award_map,
+            "death_reason": death_reason,
         }
         self.write_text("ui.initiate_combat")
         self.show_monsters(sorted(set(enemies)))
@@ -1087,7 +1124,7 @@ class TalesOfVisteriaApp:
 
         self.combat["guarding"] = False
         if self.player["health"] <= 0:
-            self.set_game_over_reason("combat")
+            self.set_game_over_reason(self.combat.get("death_reason", "combat"))
         if self.check_death():
             self.combat = None
             return
@@ -1095,10 +1132,16 @@ class TalesOfVisteriaApp:
 
     def win_combat(self):
         victory_text = self.combat["victory_text"]
+        victory_callback = self.combat.get("victory_callback")
+        award_map = self.combat.get("award_map", True)
         self.combat = None
         self.write_text(victory_text)
-        self.write_text("story.combat_loot_map")
-        self.award_throne_map()
+        if victory_callback:
+            victory_callback()
+            return
+        if award_map:
+            self.write_text("story.combat_loot_map")
+            self.award_throne_map()
         self.update_status()
         self.route_choice_done()
 
@@ -1115,7 +1158,7 @@ class TalesOfVisteriaApp:
 
     def city_district(self):
         self.write_text("story.city_enter")
-        if self.player["flags"]["girl_hint"] in ("barracks_city", "barracks_glowing_ball"):
+        if self.player["flags"]["girl_hint"] in ("barracks_city", "merchant_glowy_ball"):
             self.write_text("story.city_girl_hint")
         self.write_text("story.city_description")
         self.show_monsters(["Orc", "Goblin"])
@@ -1211,55 +1254,262 @@ class TalesOfVisteriaApp:
         self.write_text("story.residential", clear=clear)
         self.set_choices(
             [
-                (self.text("choice.open_chests"), lambda: self.residential_result("chests")),
-                (self.text("choice.study_rooms"), lambda: self.residential_result("study")),
+                (self.text("choice.large_manor"), self.large_manor),
+                (self.text("choice.small_shack"), self.small_shack),
+                (self.text("choice.large_house"), self.mimic_house),
+                (self.text("choice.proceed_bridge"), self.go_to_bridge),
             ]
         )
 
-    def residential_result(self, choice):
-        if choice == "chests":
-            if random.randint(1, 6) <= 2:
-                self.show_monsters(["Mimic"])
-                self.write_text("story.residential_mimic")
-                self.player["health"] -= 4
-                if self.player["health"] <= 0:
-                    self.set_game_over_reason("mimic")
-            else:
-                self.loot(["gold", "supplies", "precious gems", "silver ring"])
-        else:
-            self.write_text("story.residential_study")
-            self.add_item("city lore")
-
-        if self.check_death():
-            return
+    def go_to_bridge(self):
         self.player["chapter"] = "bridge"
         self.continue_chapter()
+
+    def large_manor(self):
+        self.write_text("story.large_manor")
+        roll = self.roll_d20("sneak")
+        if roll <= 14:
+            self.write_text("story.large_manor_seen")
+            self.manor_combat()
+        elif roll <= 19:
+            self.write_text("story.large_manor_unseen")
+            self.set_choices(
+                [
+                    (self.text("choice.attack_them"), self.manor_combat),
+                    (self.text("choice.sneak_past"), self.manor_sneak),
+                    (self.text("choice.proceed_bridge"), self.go_to_bridge),
+                ]
+            )
+        else:
+            self.write_text("story.large_manor_grouped")
+            self.set_choices([(self.text("choice.take_them_out"), self.manor_group_kill)])
+
+    def manor_sneak(self):
+        self.write_text("story.manor_sneak")
+        self.set_choices(
+            [
+                (self.text("choice.attack_them"), self.manor_combat),
+                (self.text("choice.loot_manor"), self.manor_loot),
+                (self.text("choice.proceed_bridge"), self.go_to_bridge),
+            ]
+        )
+
+    def manor_group_kill(self):
+        self.write_text(f"story.manor_group_kill_{self.player['class']}")
+        self.manor_win()
+
+    def manor_combat(self):
+        self.show_monsters(["Orc", "Goblin"])
+        self.start_combat(
+            ["goblin", "goblin", "goblin", "goblin", "goblin", "orc", "orc"],
+            "story.manor_combat_victory",
+            attackers_per_round=1,
+            victory_callback=self.manor_win,
+            award_map=False,
+        )
+
+    def manor_win(self):
+        self.write_text("story.manor_win")
+        self.set_choices([(self.text("choice.loot_manor"), self.manor_loot)])
+
+    def manor_loot(self):
+        self.write_text("story.manor_loot")
+        self.set_choices(
+            [
+                (self.text("choice.use_keys_chest"), self.manor_chest_keys),
+                (self.text("choice.leave_found"), self.go_to_bridge),
+                (self.text("choice.store_keys_chest"), self.manor_store_chest),
+            ]
+        )
+
+    def manor_store_chest(self):
+        self.player["flags"]["has_manor_keys"] = True
+        self.player["flags"]["has_black_chest"] = True
+        self.add_item("unmarked keys")
+        self.add_item("small black chest")
+        self.write_text("story.manor_store_chest")
+        self.set_choices([(self.text("choice.leave_house"), self.go_to_bridge)])
+
+    def manor_chest_keys(self):
+        self.write_text("story.manor_chest_keys")
+        self.set_choices(
+            [
+                (self.text("choice.blue_key"), lambda: self.manor_chest_result("blue")),
+                (self.text("choice.yellow_key"), lambda: self.manor_chest_result("yellow")),
+                (self.text("choice.red_key"), lambda: self.manor_chest_result("red")),
+                (self.text("choice.black_key"), lambda: self.manor_chest_result("black")),
+                (self.text("choice.iron_key"), lambda: self.manor_chest_result("iron")),
+                (self.text("choice.gold_key"), lambda: self.manor_chest_result("gold")),
+                (self.text("choice.silver_key"), lambda: self.manor_chest_result("silver")),
+                (self.text("choice.green_key"), lambda: self.manor_chest_result("green")),
+            ]
+        )
+
+    def manor_chest_result(self, key):
+        if key != "red":
+            self.write_text("story.manor_chest_trap")
+            self.set_game_over_reason("manor_chest")
+            self.player["health"] = 0
+            self.check_death()
+            return
+
+        self.write_text("story.manor_chest_unlock")
+        self.set_choices([(self.text("choice.open_chest"), self.manor_magistone_orb)])
+
+    def manor_magistone_orb(self):
+        self.player["flags"]["has_magistone_orb"] = True
+        self.add_item("magistone orb")
+        self.write_text("story.manor_magistone_orb")
+        self.set_choices([(self.text("choice.leave_house"), self.go_to_bridge)])
+
+    def small_shack(self):
+        self.write_text("story.small_shack")
+        self.show_monsters(["Gremlin", "Ghoul"])
+        self.start_combat(
+            ["gremlin", "ghoul"],
+            "story.small_shack_win",
+            attackers_per_round=2,
+            victory_callback=self.small_shack_win,
+            award_map=False,
+        )
+
+    def small_shack_win(self):
+        self.set_choices(
+            [
+                (self.text("choice.return_street"), lambda: self.residential_area(clear=True)),
+                (self.text("choice.proceed_bridge"), self.go_to_bridge),
+            ]
+        )
+
+    def mimic_house(self):
+        self.write_text("story.mimic_house")
+        self.set_choices(
+            [
+                (self.text("choice.burn_house"), self.mimic_house_burn),
+                (self.text("choice.leave_immediately"), self.mimic_house_leave),
+                (self.text("choice.loot_chests"), self.mimic_house_loot),
+                (self.text("choice.rest_here"), self.mimic_house_rest),
+            ]
+        )
+
+    def mimic_house_burn(self):
+        self.write_text("story.mimic_house_burn")
+        self.set_choices(
+            [
+                (self.text("choice.fight_mimic_house"), self.mimic_house_fight_one),
+                (self.text("choice.try_flee"), self.mimic_house_flee),
+            ]
+        )
+
+    def mimic_house_leave(self):
+        self.write_text("story.mimic_house_leave")
+        self.go_to_bridge()
+
+    def mimic_house_loot(self):
+        self.show_monsters(["Mimic"])
+        self.write_text("story.mimic_house_loot")
+        self.set_choices(
+            [
+                (self.text("choice.fight_mimic"), self.mimic_house_fight_one),
+                (self.text("choice.if_eaten"), self.mimic_game_over),
+            ]
+        )
+
+    def mimic_house_rest(self):
+        self.write_text("story.mimic_house_rest")
+        self.mimic_game_over()
+
+    def mimic_house_fight_one(self):
+        self.show_monsters(["Mimic"])
+        self.start_combat(
+            ["mimic"],
+            "story.mimic_house_fight_one_win",
+            attackers_per_round=1,
+            victory_callback=self.mimic_house_second_wave,
+            award_map=False,
+            death_reason="mimic",
+        )
+
+    def mimic_house_second_wave(self):
+        self.write_text("story.mimic_house_second_wave")
+        self.set_choices(
+            [
+                (self.text("choice.fight"), self.mimic_house_fight_two),
+                (self.text("choice.flee"), self.mimic_house_flee),
+            ]
+        )
+
+    def mimic_house_fight_two(self):
+        self.show_monsters(["Mimic"])
+        self.start_combat(
+            ["mimic", "mimic"],
+            "story.mimic_house_fight_two_win",
+            attackers_per_round=2,
+            victory_callback=self.mimic_house_escape,
+            award_map=False,
+            death_reason="mimic",
+        )
+
+    def mimic_house_escape(self):
+        if not self.player["flags"]["has_partial_map"]:
+            self.player["flags"]["has_partial_map"] = True
+            self.add_item("torn bridge map")
+        self.write_text("story.mimic_house_escape")
+        self.set_choices([(self.text("choice.proceed_bridge"), self.go_to_bridge)])
+
+    def mimic_house_flee(self):
+        self.write_text("story.mimic_house_flee")
+        choices = [
+            (self.text("choice.black_hole"), self.mimic_house_black_hole),
+            (self.text("choice.cast_fire"), self.mimic_house_fire),
+            (self.text("choice.attack_walls"), self.mimic_house_walls),
+        ]
+        if self.player["flags"].get("has_dwarven_ale") or "dwarven ale" in self.player["gear"]:
+            choices.append((self.text("choice.pour_ale"), self.mimic_house_ale))
+        self.set_choices(choices)
+
+    def mimic_house_black_hole(self):
+        self.write_text("story.mimic_house_black_hole")
+        self.mimic_game_over()
+
+    def mimic_house_fire(self):
+        self.write_text("story.mimic_house_fire")
+        self.set_choices([(self.text("choice.proceed_bridge"), self.go_to_bridge)])
+
+    def mimic_house_walls(self):
+        self.write_text("story.mimic_house_walls")
+        self.mimic_game_over()
+
+    def mimic_house_ale(self):
+        self.remove_item("dwarven ale")
+        self.write_text("story.mimic_house_ale")
+        self.set_choices([(self.text("choice.proceed_bridge"), self.go_to_bridge)])
+
+    def mimic_game_over(self):
+        self.set_game_over_reason("mimic")
+        self.player["health"] = 0
+        self.check_death()
 
     def bridge_prompt(self, clear=False):
         text = self.text("story.bridge")
         if self.player["flags"].get("has_throne_map"):
             text += self.text("story.bridge_has_map")
+        elif self.player["flags"].get("has_partial_map"):
+            text += self.text("story.bridge_partial_map")
         else:
             text += self.text("story.bridge_no_map")
+        text += self.text("story.bridge_temp_end")
         self.write(text, clear=clear)
 
-        if self.player["flags"].get("has_throne_map"):
-            self.set_choices(
-                [
-                    (self.text("choice.navigate_bridge"), self.start_bridge_navigation),
-                    (self.text("choice.prepare"), lambda: self.cross_bridge("prepare")),
-                    (self.text("choice.save"), self.save_game),
-                    (self.text("choice.main_menu"), self.show_start_screen),
-                ]
-            )
-            return
+        if not self.player["flags"].get("completed_recorded"):
+            self.record_stat("reached_end")
+            self.player["flags"]["completed_recorded"] = True
+        self.save_game()
 
         self.set_choices(
             [
-                (self.text("choice.cross"), lambda: self.cross_bridge("cross")),
-                (self.text("choice.prepare"), lambda: self.cross_bridge("prepare")),
-                (self.text("choice.save"), self.save_game),
                 (self.text("choice.main_menu"), self.show_start_screen),
+                (self.text("choice.quit"), self.root.destroy),
             ]
         )
 
@@ -1278,10 +1528,12 @@ class TalesOfVisteriaApp:
         self.write_text("story.warehouse_enter")
         if self.player["flags"]["girl_helped"]:
             self.write_text("story.warehouse_girl_helped")
+        elif self.player["flags"].get("has_magistone_orb"):
+            self.write_text("story.warehouse_magistone_orb")
         else:
             self.write_text("story.warehouse_no_help")
 
-        if self.roll("combat", 15) or self.player["flags"]["girl_helped"]:
+        if self.roll("combat", 15) or self.player["flags"]["girl_helped"] or self.player["flags"].get("has_magistone_orb"):
             self.write_text("story.warehouse_success")
             self.player["flags"]["bridge_crossed"] = True
             self.player["chapter"] = "production"
