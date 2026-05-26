@@ -17,6 +17,7 @@ STATS_FILE = Path("player_stats.json")
 MONSTER_FILE = resource_path("monster_stats.json")
 GAME_OVER_IMAGE = resource_path("game_over_party.png")
 TEXT_FILE = resource_path("translations/en.json")
+APP_VERSION = "0.7.0"
 
 CLASSES = {
     "warrior": {
@@ -176,7 +177,7 @@ ACHIEVEMENTS = {
 class TalesOfVisteriaApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Tales of Visteria")
+        self.root.title(f"Tales of Visteria v{APP_VERSION}")
         self.root.geometry("1180x720")
         self.root.minsize(960, 560)
         self.player = None

@@ -2,6 +2,8 @@
 
 A simple GUI dark fantasy adventure.
 
+Current version: **0.7.0**
+
 ## Content warning
 
 This game may contain vulgar language and dark fantasy themes.
