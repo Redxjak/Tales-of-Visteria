@@ -1,5 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import re
+
+
+def app_version():
+    with open('game.py', encoding='utf-8') as game_file:
+        match = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', game_file.read())
+    if not match:
+        raise RuntimeError('APP_VERSION was not found in game.py')
+    return match.group(1)
+
+
+APP_VERSION = app_version()
 
 a = Analysis(
     ['game.py'],
@@ -26,7 +38,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='TalesofVisteria',
+    name=f'TalesofVisteria-v{APP_VERSION}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

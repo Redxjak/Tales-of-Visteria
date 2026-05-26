@@ -7,6 +7,7 @@ build/
 dist/*
 !dist/
 !dist/TalesofVisteria.exe
+!dist/TalesofVisteria-v*.exe
 
 savegame.json
 player_stats.json

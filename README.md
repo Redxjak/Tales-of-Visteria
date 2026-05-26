@@ -12,7 +12,7 @@ This game may contain vulgar language and dark fantasy themes.
 
 Download or run the latest Windows executable:
 
-[TalesofVisteria.exe](dist/TalesofVisteria.exe)
+[TalesofVisteria-v0.7.0.exe](dist/TalesofVisteria-v0.7.0.exe)
 
 Run the game from this folder:
 
