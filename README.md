@@ -10,6 +10,11 @@ This game may contain vulgar language and dark fantasy themes.
 
 ## How to play
 
+Browser version:
+
+- English: [https://redxjak.github.io/ToV/en](https://redxjak.github.io/ToV/en)
+- Spanish: [https://redxjak.github.io/ToV/es](https://redxjak.github.io/ToV/es)
+
 Download or run the latest Windows executable:
 
 [TalesofVisteria-v0.7.0.exe](dist/TalesofVisteria-v0.7.0.exe)
@@ -32,7 +37,7 @@ On Windows, you can also double-click `Tales of Visteria.pyw` to launch the GUI 
 
 Story and UI text are loaded from `translations/en.json`.
 
-For another language, copy `translations/en.json` to a new file such as `translations/es.json`, keep the same keys, and translate only the values. The game currently loads English, but this structure is ready for a future online version to choose a language file based on the page link.
+For another language, copy `translations/en.json` to a new file such as `translations/es.json`, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes; the Spanish data file currently mirrors English until the translation pass is complete.
 
 ## Current chapter
 
