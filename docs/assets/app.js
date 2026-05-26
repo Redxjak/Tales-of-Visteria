@@ -257,6 +257,7 @@
     stats: loadJson("stats", defaultStats()),
     combat: null,
     storyParts: [],
+    showGameOverImage: false,
     choices: []
   };
 
@@ -317,6 +318,7 @@
   function write(text, clear = false) {
     if (clear) {
       state.storyParts = [];
+      state.showGameOverImage = false;
     }
     if (state.storyParts.length) {
       state.storyParts.push("<hr>");
@@ -336,6 +338,13 @@
 
   function render() {
     document.getElementById("story").innerHTML = state.storyParts.join("");
+    if (state.showGameOverImage) {
+      const img = document.createElement("img");
+      img.className = "game-over-image";
+      img.alt = "Tales of Visteria party";
+      img.src = "../assets/game_over_party.png";
+      document.getElementById("story").appendChild(img);
+    }
     document.getElementById("status").textContent = statusText();
     document.getElementById("sheet").innerHTML = sheetText();
     document.getElementById("plot").textContent = plotText();
@@ -1419,11 +1428,7 @@
     }
     const reason = state.player ? state.player.gameOverReason : "default";
     write(`${t("story.game_over_header")}\n\n${t(`game_over.${reason}`)}\n\n${t("story.game_over_footer")}`, true);
-    const img = document.createElement("img");
-    img.className = "game-over-image";
-    img.alt = "Tales of Visteria party";
-    img.src = "../assets/game_over_party.png";
-    document.getElementById("story").appendChild(img);
+    state.showGameOverImage = true;
     setChoices([
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.main_menu"), showStart)
