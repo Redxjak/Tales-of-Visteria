@@ -35,9 +35,9 @@ On Windows, you can also double-click `Tales of Visteria.pyw` to launch the GUI 
 
 ## Text and translations
 
-Story and UI text are loaded from `translations/en.json`.
+Story and UI text are loaded from `translations/en.json`, with the Spanish pass maintained in `translations/es.json`.
 
-For another language, copy `translations/en.json` to a new file such as `translations/es.json`, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes; the Spanish data file currently mirrors English until the translation pass is complete.
+For another language, copy `translations/en.json` to a new file, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes.
 
 ## Current chapter
 

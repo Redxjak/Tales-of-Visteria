@@ -8,6 +8,49 @@
   const XP_PER_LEVEL = 50;
   const lang = document.body.dataset.language || "en";
   const storagePrefix = "tov.web.";
+  const uiTextByLanguage = {
+    en: {
+      english: "English",
+      spanish: "Spanish",
+      characterSheet: "Character Sheet",
+      plotDevelopment: "Plot Development",
+      noCharacter: "No character selected.\n\nStart a new game or load a save.",
+      trait: "Trait",
+      value: "Value",
+      name: "Name",
+      race: "Race",
+      className: "Class",
+      level: "Level",
+      experience: "Experience",
+      hp: "HP",
+      ac: "AC",
+      attackBonus: "Attack Bonus",
+      damage: "Damage",
+      equipment: "Equipment",
+      moveOn: "Move on"
+    },
+    es: {
+      english: "Inglés",
+      spanish: "Español",
+      characterSheet: "Hoja de personaje",
+      plotDevelopment: "Desarrollo de la trama",
+      noCharacter: "No hay personaje seleccionado.\n\nEmpieza una nueva partida o carga una partida guardada.",
+      trait: "Rasgo",
+      value: "Valor",
+      name: "Nombre",
+      race: "Raza",
+      className: "Clase",
+      level: "Nivel",
+      experience: "Experiencia",
+      hp: "PV",
+      ac: "CA",
+      attackBonus: "Bonif. ataque",
+      damage: "Daño",
+      equipment: "Equipo",
+      moveOn: "Continuar"
+    }
+  };
+  const ui = uiTextByLanguage[lang] || uiTextByLanguage.en;
 
   const classes = {
     warrior: {
@@ -92,6 +135,37 @@
     }
   };
 
+  const classTranslations = {
+    es: {
+      warrior: {
+        title: "Bárbaro",
+        race: "Goliat",
+        description: "Un Bárbaro goliat con mucha salud y ataques cuerpo a cuerpo brutales."
+      },
+      ranger: {
+        title: "Explorador",
+        race: "Elfo",
+        description: "Un Explorador élfico con gran precisión y dos ataques."
+      },
+      scholar: {
+        title: "Brujo",
+        race: "Humano",
+        description: "Un Brujo humano con poder eldritch y buena persuasión."
+      },
+      dwarf: {
+        title: "Guerrero",
+        race: "Enano",
+        description: "Un Guerrero enano con armadura, aguante y dos ataques."
+      },
+      dm: {
+        title: "DM",
+        race: "Dios",
+        description: "Un Dios adicto a la nicotina que controla la historia desde arriba."
+      }
+    }
+  };
+  Object.entries(classTranslations[lang] || {}).forEach(([key, values]) => Object.assign(classes[key], values));
+
   const monsterStats = {
     goblin: { name: "Goblin", ac: 15, hp: 7, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 20 },
     orc: { name: "Orc", ac: 13, hp: 15, attackBonus: 5, damageDie: 12, damageBonus: 3, xp: 35 },
@@ -100,35 +174,69 @@
     mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 }
   };
 
-  const achievements = {
-    first_fight: "First Blood",
-    ghost_ally: "Tiny Terror",
-    group_kill: "Crowd Control",
-    lucky: "Lucky",
-    unlucky: "Unlucky",
-    forest_mind_break: "Dazed and Confused",
-    ghost_slayer: "Ghost Slayer",
-    ghost_kiss: "Not Your Goth Baddie",
-    pyromaniac: "Pyromaniac",
-    send_hydra: "Fuck Dem Kids",
-    correct_chest_key: "Keyed In",
-    mimic_nap: "Sleep Tight",
-    played_everyone: "Full Party"
+  const achievementsByLanguage = {
+    en: {
+      first_fight: "First Blood",
+      ghost_ally: "Tiny Terror",
+      group_kill: "Crowd Control",
+      lucky: "Lucky",
+      unlucky: "Unlucky",
+      forest_mind_break: "Dazed and Confused",
+      ghost_slayer: "Ghost Slayer",
+      ghost_kiss: "Not Your Goth Baddie",
+      pyromaniac: "Pyromaniac",
+      send_hydra: "Fuck Dem Kids",
+      correct_chest_key: "Keyed In",
+      mimic_nap: "Sleep Tight",
+      played_everyone: "Full Party"
+    },
+    es: {
+      first_fight: "Primera sangre",
+      ghost_ally: "Terror diminuto",
+      group_kill: "Control de masas",
+      lucky: "Con suerte",
+      unlucky: "Sin suerte",
+      forest_mind_break: "Aturdido y confundido",
+      ghost_slayer: "Cazafantasmas",
+      ghost_kiss: "No es tu gótica",
+      pyromaniac: "Piromano",
+      send_hydra: "Al diablo con ellos",
+      correct_chest_key: "La llave correcta",
+      mimic_nap: "Duerme bien",
+      played_everyone: "Grupo completo"
+    }
   };
+  const achievements = achievementsByLanguage[lang] || achievementsByLanguage.en;
 
-  const xpReasons = {
-    combat: "won a fight",
-    caravan_run: "escaped the caravan",
-    forest_attempt: "tested the forest path",
-    choose_cave: "chose the cave",
-    go_deeper: "pressed deeper into Visteria",
-    ghost_choice: "faced the ghost girl",
-    doll_choice: "made a choice about the doll",
-    district_choice: "chose a district route",
-    search: "searched for supplies",
-    residential_choice: "explored the residential district",
-    bridge: "reached the bridge"
+  const xpReasonsByLanguage = {
+    en: {
+      combat: "won a fight",
+      caravan_run: "escaped the caravan",
+      forest_attempt: "tested the forest path",
+      choose_cave: "chose the cave",
+      go_deeper: "pressed deeper into Visteria",
+      ghost_choice: "faced the ghost girl",
+      doll_choice: "made a choice about the doll",
+      district_choice: "chose a district route",
+      search: "searched for supplies",
+      residential_choice: "explored the residential district",
+      bridge: "reached the bridge"
+    },
+    es: {
+      combat: "ganaste una pelea",
+      caravan_run: "escapaste de la caravana",
+      forest_attempt: "probaste el camino del bosque",
+      choose_cave: "elegiste la cueva",
+      go_deeper: "avanzaste más profundo en Visteria",
+      ghost_choice: "enfrentaste a la niña fantasma",
+      doll_choice: "decidiste qué hacer con la muñeca",
+      district_choice: "elegiste una ruta de distrito",
+      search: "buscaste suministros",
+      residential_choice: "exploraste el distrito residencial",
+      bridge: "llegaste al puente"
+    }
   };
+  const xpReasons = xpReasonsByLanguage[lang] || xpReasonsByLanguage.en;
 
   const decisionXp = {
     caravan_run: 20,
@@ -176,21 +284,21 @@
           <span class="version">v${VERSION}</span>
         </div>
         <div class="meta-row">
-          <a class="lang-link" href="../en/">English</a>
-          <a class="lang-link" href="../es/">Espanol</a>
+          <a class="lang-link" href="../en/">${ui.english}</a>
+          <a class="lang-link" href="../es/">${ui.spanish}</a>
         </div>
         <div id="status" class="status"></div>
       </header>
       <section class="layout">
         <aside class="side-panel">
-          <h2 class="panel-title">Character Sheet</h2>
+          <h2 class="panel-title">${ui.characterSheet}</h2>
           <div id="sheet" class="sheet"></div>
         </aside>
         <section class="story-panel">
           <div id="story" class="story"></div>
         </section>
         <aside class="side-panel">
-          <h2 class="panel-title">Plot Development</h2>
+          <h2 class="panel-title">${ui.plotDevelopment}</h2>
           <div id="plot" class="plot"></div>
         </aside>
       </section>
@@ -784,7 +892,7 @@
     } else {
       awardMap();
     }
-    setChoices([choice("Move on", next)]);
+    setChoices([choice(ui.moveOn, next)]);
   }
 
   function awardMap() {
@@ -1379,23 +1487,23 @@
 
   function sheetText() {
     if (!state.player) {
-      return "No character selected.\n\nStart a new game or load a save.";
+      return ui.noCharacter;
     }
     const stats = combatStats();
     return [
-      "Trait              Value",
+      `${ui.trait.padEnd(18)}${ui.value}`,
       "------------------------------",
-      `Name               ${state.player.name}`,
-      `Race               ${state.player.race}`,
-      `Class              ${state.player.title}`,
-      `Level              ${state.player.class === "dm" ? "DM" : state.player.level}`,
-      `Experience         ${state.player.experience}/${state.player.xpToNext}`,
-      `HP                 ${state.player.health}/${state.player.maxHealth}`,
-      `AC                 ${stats.ac}`,
-      `Attack Bonus       +${stats.attackBonus}`,
-      `Damage             d${stats.damageDie} + ${stats.damageBonus}`,
+      `${ui.name.padEnd(18)}${state.player.name}`,
+      `${ui.race.padEnd(18)}${state.player.race}`,
+      `${ui.className.padEnd(18)}${state.player.title}`,
+      `${ui.level.padEnd(18)}${state.player.class === "dm" ? "DM" : state.player.level}`,
+      `${ui.experience.padEnd(18)}${state.player.experience}/${state.player.xpToNext}`,
+      `${ui.hp.padEnd(18)}${state.player.health}/${state.player.maxHealth}`,
+      `${ui.ac.padEnd(18)}${stats.ac}`,
+      `${ui.attackBonus.padEnd(18)}+${stats.attackBonus}`,
+      `${ui.damage.padEnd(18)}d${stats.damageDie} + ${stats.damageBonus}`,
       "",
-      "Equipment",
+      ui.equipment,
       "------------------------------",
       state.player.gear.join("\n") || t("ui.none")
     ].join("\n");
