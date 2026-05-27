@@ -3,7 +3,7 @@ import random
 import sys
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 
 
 def resource_path(filename):
@@ -188,6 +188,7 @@ class TalesOfVisteriaApp:
         self.monsters = self.load_monsters()
         self.text_content = self.load_text_content()
         self.stats = self.load_stats()
+        self.account_name = self.text("ui.guest")
 
         self.root.configure(bg="#141414")
         self.root.grid_rowconfigure(2, weight=1)
@@ -264,7 +265,7 @@ class TalesOfVisteriaApp:
         self.choice_frame = tk.Frame(root, bg="#141414")
         self.choice_frame.grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 18))
 
-        self.show_start_screen()
+        self.show_login_screen()
 
     def create_info_panel(self, parent, title, width):
         panel = tk.Frame(parent, bg="#1d1b18", highlightthickness=1, highlightbackground="#342b24")
@@ -786,6 +787,32 @@ class TalesOfVisteriaApp:
     def set_game_over_reason(self, reason):
         if self.player:
             self.player["game_over_reason"] = reason
+
+    def show_login_screen(self):
+        self.player = None
+        self.update_status()
+        self.write_text("story.login", clear=True)
+        self.set_choices(
+            [
+                (self.text("choice.login"), self.login),
+                (self.text("choice.play_as_guest"), self.play_as_guest),
+            ]
+        )
+
+    def login(self):
+        account_name = simpledialog.askstring(
+            self.text("choice.login"),
+            self.text("ui.login_prompt"),
+            parent=self.root,
+        )
+        if not account_name:
+            return
+        self.account_name = account_name.strip()[:32] or self.text("ui.guest")
+        self.show_start_screen()
+
+    def play_as_guest(self):
+        self.account_name = self.text("ui.guest")
+        self.show_start_screen()
 
     def show_start_screen(self):
         self.player = None

@@ -41,6 +41,12 @@
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
+      loginScreen: "Login or play as a guest",
+      loginPrompt: "Enter your display name:",
+      login: "Login",
+      playAsGuest: "Play as Guest",
+      guest: "Guest",
+      accountLabel: "Player: {name}",
       moveOn: "Move on"
     },
     es: {
@@ -72,6 +78,12 @@
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
+      loginScreen: "Inicia sesion o juega como invitado",
+      loginPrompt: "Ingresa tu nombre publico:",
+      login: "Iniciar sesion",
+      playAsGuest: "Jugar como invitado",
+      guest: "Invitado",
+      accountLabel: "Jugador: {name}",
       moveOn: "Continuar"
     }
   };
@@ -283,6 +295,7 @@
     combat: null,
     storyParts: [],
     showGameOverImage: false,
+    account: loadAccount(),
     leaderboard: [],
     choices: []
   };
@@ -300,7 +313,7 @@
       state.text = await fallback.json();
     }
     drawShell();
-    showStart();
+    showLoginScreen();
   }
 
   function drawShell() {
@@ -313,6 +326,7 @@
         <div class="meta-row">
           <a class="lang-link" href="../en/">${ui.english}</a>
           <a class="lang-link" href="../es/">${ui.spanish}</a>
+          <span id="account-status" class="account-status"></span>
         </div>
         <div id="status" class="status"></div>
       </header>
@@ -376,6 +390,7 @@
       document.getElementById("story").appendChild(img);
     }
     document.getElementById("status").textContent = statusText();
+    document.getElementById("account-status").textContent = accountStatusText();
     document.getElementById("sheet").innerHTML = sheetText();
     document.getElementById("plot").textContent = plotText();
     const choiceArea = document.getElementById("choices");
@@ -399,6 +414,37 @@
       choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.quit"), () => write("You can close this browser tab whenever you are ready."))
     ]);
+  }
+
+  function showLoginScreen() {
+    state.player = null;
+    write(ui.loginScreen, true);
+    setChoices([
+      choice(ui.login, login),
+      choice(ui.playAsGuest, playAsGuest)
+    ]);
+  }
+
+  function login() {
+    const previousName = state.account && !state.account.guest ? state.account.name : "";
+    const playerName = window.prompt(ui.loginPrompt, previousName);
+    if (!playerName) {
+      return;
+    }
+    const cleanName = playerName.trim().slice(0, 32);
+    if (!cleanName) {
+      return;
+    }
+    state.account = { name: cleanName, guest: false };
+    localStorage.setItem(`${storagePrefix}account`, JSON.stringify(state.account));
+    localStorage.setItem(`${storagePrefix}leaderboardName`, cleanName);
+    showStart();
+  }
+
+  function playAsGuest() {
+    state.account = { name: ui.guest, guest: true };
+    localStorage.removeItem(`${storagePrefix}account`);
+    showStart();
   }
 
   function showCharacterSelect() {
@@ -1525,7 +1571,7 @@
       write(ui.scoreSubmitted);
       return;
     }
-    const previousName = localStorage.getItem(`${storagePrefix}leaderboardName`) || state.player.name;
+    const previousName = preferredLeaderboardName();
     const playerName = window.prompt(ui.playerNamePrompt, previousName);
     if (!playerName) {
       return;
@@ -1635,6 +1681,27 @@
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`
     };
+  }
+
+  function loadAccount() {
+    try {
+      const saved = localStorage.getItem(`${storagePrefix}account`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function accountStatusText() {
+    const name = state.account ? state.account.name : ui.guest;
+    return format(ui.accountLabel, { name });
+  }
+
+  function preferredLeaderboardName() {
+    if (state.account && !state.account.guest && state.account.name) {
+      return state.account.name;
+    }
+    return localStorage.getItem(`${storagePrefix}leaderboardName`) || state.player.name;
   }
 
   function ensureScoreState() {

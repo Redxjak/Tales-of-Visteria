@@ -173,6 +173,13 @@ select {
   border-color: var(--muted);
 }
 
+.account-status {
+  color: var(--muted);
+  border: 1px solid #4d3c2a;
+  padding: 6px 10px;
+  background: var(--panel-soft);
+}
+
 .progress {
   width: 100%;
   height: 8px;
