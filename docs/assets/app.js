@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.10";
+  const VERSION = "0.7.11";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -607,10 +607,7 @@
   }
 
   function openExternal(url) {
-    const opened = window.open(url, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      window.location.href = url;
-    }
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   function faqHtml() {
