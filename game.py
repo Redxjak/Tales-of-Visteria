@@ -17,7 +17,7 @@ STATS_FILE = Path("player_stats.json")
 MONSTER_FILE = resource_path("monster_stats.json")
 GAME_OVER_IMAGE = resource_path("game_over_party.png")
 TEXT_FILE = resource_path("translations/en.json")
-APP_VERSION = "0.7.6"
+APP_VERSION = "0.7.7"
 
 CLASSES = {
     "warrior": {

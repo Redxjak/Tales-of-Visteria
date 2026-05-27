@@ -2,7 +2,7 @@
 
 A simple GUI dark fantasy adventure.
 
-Current version: **0.7.6**
+Current version: **0.7.7**
 
 ## Content warning
 
@@ -41,7 +41,7 @@ For another language, copy `translations/en.json` to a new file, keep the same k
 
 ## Online accounts and leaderboard
 
-Version 0.7.6 adds Supabase email/password accounts, cloud user data, and public leaderboard support for the browser version.
+Version 0.7.7 adds Supabase accounts, cloud user data, Google sign-in support, story log access, and public leaderboard support for the browser version.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
