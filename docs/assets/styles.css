@@ -51,11 +51,11 @@ select {
   flex-wrap: wrap;
 }
 
-.title {
-  margin: 0;
-  font-size: clamp(28px, 3vw, 44px);
-  letter-spacing: 0;
-  text-align: center;
+.game-logo {
+  display: block;
+  width: min(360px, 72vw);
+  max-height: 150px;
+  object-fit: contain;
 }
 
 .version {

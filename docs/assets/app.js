@@ -370,7 +370,7 @@
     app.innerHTML = `
       <header class="topbar">
         <div class="title-row">
-          <h1 class="title">Tales of Visteria</h1>
+          <img class="game-logo" src="../assets/tales-of-visteria-logo.png" alt="Tales of Visteria">
           <span class="version">v${VERSION}</span>
         </div>
         <div class="meta-row">
@@ -1425,6 +1425,8 @@
     recordEnding();
     saveGame();
     setChoices([
+      choice(ui.submitScore, submitScore),
+      choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.main_menu"), showStart),
       choice(t("choice.save"), saveGame)
     ]);
