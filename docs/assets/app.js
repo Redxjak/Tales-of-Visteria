@@ -6,6 +6,9 @@
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
   const XP_PER_LEVEL = 50;
+  const SUPABASE_URL = "https://fojkijwketpzxsbikmsl.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_pxMr-7kXAoQ9gz0mTTWLew_FAIRtAio";
+  const LEADERBOARD_TABLE = "leaderboard_scores";
   const lang = document.body.dataset.language || "en";
   const storagePrefix = "tov.web.";
   const uiTextByLanguage = {
@@ -28,6 +31,16 @@
       damage: "Damage",
       equipment: "Equipment",
       enemyHp: "Enemy HP",
+      leaderboard: "Leaderboard",
+      submitScore: "Submit Score",
+      playerNamePrompt: "Name for the leaderboard:",
+      scoreSubmitted: "Score submitted.",
+      scoreSubmitFailed: "Could not submit score. The leaderboard table may not be set up yet.",
+      leaderboardLoading: "Loading leaderboard...",
+      leaderboardEmpty: "No scores yet.",
+      leaderboardFailed: "Could not load leaderboard.",
+      leaderboardHeader: "Leaderboard",
+      leaderboardLine: "{rank}. {name} - {score} ({character})",
       moveOn: "Move on"
     },
     es: {
@@ -49,6 +62,16 @@
       damage: "Daño",
       equipment: "Equipo",
       enemyHp: "PV enemigos",
+      leaderboard: "Clasificación",
+      submitScore: "Enviar puntaje",
+      playerNamePrompt: "Nombre para la clasificación:",
+      scoreSubmitted: "Puntaje enviado.",
+      scoreSubmitFailed: "No se pudo enviar el puntaje. Tal vez falte crear la tabla de clasificación.",
+      leaderboardLoading: "Cargando clasificación...",
+      leaderboardEmpty: "Todavía no hay puntajes.",
+      leaderboardFailed: "No se pudo cargar la clasificación.",
+      leaderboardHeader: "Clasificación",
+      leaderboardLine: "{rank}. {name} - {score} ({character})",
       moveOn: "Continuar"
     }
   };
@@ -260,6 +283,7 @@
     combat: null,
     storyParts: [],
     showGameOverImage: false,
+    leaderboard: [],
     choices: []
   };
 
@@ -311,6 +335,10 @@
 
   function t(key, vars = {}) {
     let value = state.text[key] || key;
+    return format(value, vars);
+  }
+
+  function format(value, vars = {}) {
     for (const [name, replacement] of Object.entries(vars)) {
       value = value.replaceAll(`{${name}}`, String(replacement));
     }
@@ -368,6 +396,7 @@
     setChoices([
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.load_game"), loadGame),
+      choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.quit"), () => write("You can close this browser tab whenever you are ready."))
     ]);
   }
@@ -418,6 +447,12 @@
         hasMagistoneOrb: false,
         completedRecorded: false,
         deathRecorded: false
+      },
+      score: {
+        fightsWon: 0,
+        decisions: 0,
+        submitted: false,
+        startedAt: Date.now()
       },
       gameOverReason: "default"
     };
@@ -962,6 +997,8 @@
   function manorGroupKill() {
     writeKey(`story.manor_group_kill_${state.player.class}`);
     unlock("group_kill");
+    ensureScoreState();
+    state.player.score.fightsWon += 1;
     awardXp((monsterStats.goblin.xp * 5) + (monsterStats.orc.xp * 2), "combat");
     manorWin();
   }
@@ -1141,7 +1178,11 @@
     writeKey("story.complete", {}, clear);
     recordEnding();
     saveGame();
-    setChoices([choice(t("choice.main_menu"), showStart)]);
+    setChoices([
+      choice(ui.submitScore, submitScore),
+      choice(ui.leaderboard, showLeaderboard),
+      choice(t("choice.main_menu"), showStart)
+    ]);
   }
 
   function startCombat(enemyTypes, victoryKey, options = {}) {
@@ -1291,6 +1332,8 @@
     const combat = state.combat;
     state.combat = null;
     writeKey(combat.victoryKey);
+    ensureScoreState();
+    state.player.score.fightsWon += 1;
     const xp = combat.enemies.reduce((total, enemy) => total + enemy.xp, 0);
     awardXp(xp, "combat");
     if (combat.onWin) {
@@ -1310,6 +1353,10 @@
   }
 
   function awardDecisionXp(reason) {
+    if (state.player) {
+      ensureScoreState();
+      state.player.score.decisions += 1;
+    }
     awardXp(decisionXp[reason] || 0, reason);
   }
 
@@ -1432,9 +1479,173 @@
     write(`${t("story.game_over_header")}\n\n${t(`game_over.${reason}`)}\n\n${t("story.game_over_footer")}`, true);
     state.showGameOverImage = true;
     setChoices([
+      choice(ui.submitScore, submitScore),
+      choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.main_menu"), showStart)
     ]);
+  }
+
+  async function showLeaderboard() {
+    write(ui.leaderboardLoading, true);
+    setChoices([choice(t("choice.main_menu"), showStart)]);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}?select=player_name,character_name,score,ending_reached,fights_won,achievements_unlocked,created_at&order=score.desc&limit=25`, {
+        headers: supabaseHeaders()
+      });
+      if (!response.ok) {
+        throw new Error(`Leaderboard request failed: ${response.status}`);
+      }
+      const scores = await response.json();
+      if (!scores.length) {
+        write(`${ui.leaderboardHeader}\n\n${ui.leaderboardEmpty}`, true);
+        return;
+      }
+      const lines = [ui.leaderboardHeader, ""];
+      scores.forEach((score, index) => {
+        lines.push(format(ui.leaderboardLine, {
+          rank: index + 1,
+          name: score.player_name,
+          score: score.score,
+          character: score.character_name
+        }));
+      });
+      write(lines.join("\n"), true);
+    } catch {
+      write(`${ui.leaderboardHeader}\n\n${ui.leaderboardFailed}`, true);
+    }
+  }
+
+  async function submitScore() {
+    if (!state.player) {
+      return;
+    }
+    ensureScoreState();
+    if (state.player.score.submitted) {
+      write(ui.scoreSubmitted);
+      return;
+    }
+    const previousName = localStorage.getItem(`${storagePrefix}leaderboardName`) || state.player.name;
+    const playerName = window.prompt(ui.playerNamePrompt, previousName);
+    if (!playerName) {
+      return;
+    }
+    const cleanName = playerName.trim().slice(0, 32);
+    if (!cleanName) {
+      return;
+    }
+    localStorage.setItem(`${storagePrefix}leaderboardName`, cleanName);
+    const payload = leaderboardPayload(cleanName);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}`, {
+        method: "POST",
+        headers: {
+          ...supabaseHeaders(),
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`Score submit failed: ${response.status}`);
+      }
+      state.player.score.submitted = true;
+      saveGame();
+      write(`${ui.scoreSubmitted}\n\n${cleanName}: ${payload.score}`);
+      setChoices([
+        choice(ui.leaderboard, showLeaderboard),
+        choice(t("choice.main_menu"), showStart)
+      ]);
+    } catch {
+      write(ui.scoreSubmitFailed);
+    }
+  }
+
+  function leaderboardPayload(playerName) {
+    ensureScoreState();
+    const achievementsUnlocked = Object.keys(state.stats._achievements || {}).filter((key) => state.stats._achievements[key]).length;
+    return {
+      player_name: playerName,
+      character_name: state.player.name,
+      character_class: state.player.title,
+      score: calculateScore(achievementsUnlocked),
+      ending_reached: Boolean(state.player.flags.completedRecorded),
+      fights_won: state.player.score.fightsWon,
+      deaths: state.player.flags.deathRecorded ? 1 : 0,
+      achievements_unlocked: achievementsUnlocked,
+      forest_attempts: state.player.flags.forestAttempts || 0,
+      route: scoreRoute(),
+      language: lang
+    };
+  }
+
+  function calculateScore(achievementsUnlocked) {
+    const player = state.player;
+    let score = 0;
+    score += player.level * 100;
+    score += player.experience;
+    score += player.score.fightsWon * 75;
+    score += player.score.decisions * 15;
+    score += achievementsUnlocked * 50;
+    score += player.gold * 5;
+    score += player.supplies * 10;
+    score += player.gear.length * 10;
+    if (player.flags.completedRecorded) {
+      score += 1000;
+    }
+    if (player.flags.hasDoll) {
+      score += 100;
+    }
+    if (player.flags.hasMagistoneOrb) {
+      score += 150;
+    }
+    if (player.flags.hasThroneMap) {
+      score += 150;
+    } else if (player.flags.hasPartialMap) {
+      score += 75;
+    }
+    if (player.flags.deathRecorded) {
+      score -= 200;
+    }
+    return Math.max(0, Math.round(score));
+  }
+
+  function scoreRoute() {
+    if (!state.player) {
+      return "unknown";
+    }
+    const flags = state.player.flags;
+    const pieces = [state.player.chapter || "unknown"];
+    if (flags.hasThroneMap) {
+      pieces.push("full map");
+    } else if (flags.hasPartialMap) {
+      pieces.push("partial map");
+    }
+    if (flags.hasMagistoneOrb) {
+      pieces.push("magistone orb");
+    }
+    if (flags.girlHelped) {
+      pieces.push("ghost ally");
+    }
+    return pieces.join(" | ");
+  }
+
+  function supabaseHeaders() {
+    return {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`
+    };
+  }
+
+  function ensureScoreState() {
+    if (!state.player.score) {
+      state.player.score = {
+        fightsWon: 0,
+        decisions: 0,
+        submitted: false,
+        startedAt: Date.now()
+      };
+    }
   }
 
   function saveGame() {
@@ -1452,6 +1663,7 @@
     }
     try {
       state.player = JSON.parse(saved);
+      ensureScoreState();
       writeKey("ui.loaded_game", {}, true);
       continueChapter(state.player.chapter || "caravan");
     } catch {

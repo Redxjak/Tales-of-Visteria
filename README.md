@@ -39,6 +39,12 @@ Story and UI text are loaded from `translations/en.json`, with the Spanish pass 
 
 For another language, copy `translations/en.json` to a new file, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes.
 
+## Online leaderboard
+
+The browser version can submit public display-name scores to Supabase.
+
+Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
+
 ## Current chapter
 
 The playable opening includes:
