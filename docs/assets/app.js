@@ -27,6 +27,7 @@
       attackBonus: "Attack Bonus",
       damage: "Damage",
       equipment: "Equipment",
+      enemyHp: "Enemy HP",
       moveOn: "Move on"
     },
     es: {
@@ -47,6 +48,7 @@
       attackBonus: "Bonif. ataque",
       damage: "Daño",
       equipment: "Equipo",
+      enemyHp: "PV enemigos",
       moveOn: "Continuar"
     }
   };
@@ -291,14 +293,14 @@
         <div id="status" class="status"></div>
       </header>
       <section class="layout">
-        <aside class="side-panel">
+        <aside class="side-panel player-panel">
           <h2 class="panel-title">${ui.characterSheet}</h2>
           <div id="sheet" class="sheet"></div>
         </aside>
         <section class="story-panel">
           <div id="story" class="story"></div>
         </section>
-        <aside class="side-panel">
+        <aside class="side-panel plot-panel">
           <h2 class="panel-title">${ui.plotDevelopment}</h2>
           <div id="plot" class="plot"></div>
         </aside>
@@ -1145,7 +1147,7 @@
   function startCombat(enemyTypes, victoryKey, options = {}) {
     const enemies = enemyTypes.map((type, index) => {
       const base = monsterStats[type];
-      return { ...base, type, id: index + 1, name: `${base.name} ${index + 1}`, hp: base.hp };
+      return { ...base, type, id: index + 1, name: `${base.name} ${index + 1}`, hp: base.hp, maxHp: base.hp };
     });
     state.combat = {
       enemies,
@@ -1510,8 +1512,24 @@
       "",
       ui.equipment,
       "------------------------------",
-      state.player.gear.join("\n") || t("ui.none")
+      state.player.gear.join("\n") || t("ui.none"),
+      enemyHpText()
     ].join("\n");
+  }
+
+  function enemyHpText() {
+    if (!state.combat) {
+      return "";
+    }
+    const lines = [
+      "",
+      ui.enemyHp,
+      "------------------------------"
+    ];
+    state.combat.enemies.forEach((enemy) => {
+      lines.push(`${enemy.name.padEnd(16)}${Math.max(0, enemy.hp)}/${enemy.maxHp}`);
+    });
+    return lines.join("\n");
   }
 
   function plotText() {
