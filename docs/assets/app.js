@@ -60,6 +60,8 @@
       cloudSaved: "Cloud save updated.",
       accountLabel: "Player: {name}",
       accountMenu: "Account menu",
+      faq: "FAQ",
+      closeFaq: "Close FAQ",
       log: "Log",
       closeLog: "Close",
       emptyLog: "No story log yet.",
@@ -113,6 +115,8 @@
       cloudSaved: "Guardado en la nube actualizado.",
       accountLabel: "Jugador: {name}",
       accountMenu: "Menu de cuenta",
+      faq: "FAQ",
+      closeFaq: "Cerrar FAQ",
       log: "Registro",
       closeLog: "Cerrar",
       emptyLog: "Todavia no hay registro.",
@@ -328,6 +332,7 @@
     storyParts: [],
     logParts: [],
     logVisible: false,
+    faqVisible: false,
     showGameOverImage: false,
     awaitingLevelReward: false,
     pendingChoices: null,
@@ -382,6 +387,7 @@
               <button id="menu-save" type="button">${t("choice.save")}</button>
               <button id="menu-load" type="button">${t("choice.load_game")}</button>
               <button id="menu-leaderboard" type="button">${ui.leaderboard}</button>
+              <button id="menu-faq" type="button">${ui.faq}</button>
               <button id="menu-logout" type="button">${ui.logout}</button>
             </div>
           </details>
@@ -408,6 +414,13 @@
           <button id="close-log" class="utility-button" type="button">${ui.closeLog}</button>
         </div>
         <div id="log-content" class="log-content"></div>
+      </section>
+      <section id="faq-panel" class="faq-panel" hidden>
+        <div class="log-header">
+          <h2>${ui.faq}</h2>
+          <button id="close-faq" class="utility-button" type="button">${ui.closeFaq}</button>
+        </div>
+        <div id="faq-content" class="faq-content"></div>
       </section>
       <nav id="choices" class="choices"></nav>
     `;
@@ -474,6 +487,9 @@
     document.getElementById("log-button").onclick = showLog;
     document.getElementById("close-log").onclick = hideLog;
     document.getElementById("log-panel").hidden = !state.logVisible;
+    document.getElementById("faq-content").innerHTML = faqHtml();
+    document.getElementById("close-faq").onclick = hideFaq;
+    document.getElementById("faq-panel").hidden = !state.faqVisible;
     const choiceArea = document.getElementById("choices");
     choiceArea.innerHTML = "";
     state.choices.forEach((choice) => {
@@ -513,13 +529,31 @@
     }
   }
 
+  function showFaq() {
+    state.faqVisible = true;
+    const panel = document.getElementById("faq-panel");
+    if (panel) {
+      panel.hidden = false;
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function hideFaq() {
+    state.faqVisible = false;
+    const panel = document.getElementById("faq-panel");
+    if (panel) {
+      panel.hidden = true;
+    }
+  }
+
   function bindAccountMenu() {
     const menu = document.getElementById("account-menu");
     const saveButton = document.getElementById("menu-save");
     const loadButton = document.getElementById("menu-load");
     const leaderboardButton = document.getElementById("menu-leaderboard");
+    const faqButton = document.getElementById("menu-faq");
     const logoutButton = document.getElementById("menu-logout");
-    if (!saveButton || !loadButton || !leaderboardButton || !logoutButton) {
+    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !logoutButton) {
       return;
     }
     if (menu) {
@@ -529,6 +563,7 @@
     saveButton.onclick = () => runAccountMenuAction(saveGame);
     loadButton.onclick = () => runAccountMenuAction(loadGame);
     leaderboardButton.onclick = () => runAccountMenuAction(showLeaderboard);
+    faqButton.onclick = () => runAccountMenuAction(showFaq);
     logoutButton.onclick = () => runAccountMenuAction(logout);
   }
 
@@ -538,6 +573,58 @@
       menu.open = false;
     }
     action();
+  }
+
+  function faqHtml() {
+    const entries = lang === "es" ? [
+      {
+        question: "Que hacen las opciones de ataque?",
+        answer: "Attack usa tus ataques normales. Heavy Attack hace un solo ataque mas fuerte, pero con -2 al tiro para golpear. Dodge sube tu AC por ese turno. Run intenta escapar con una tirada de sneak. Health Potion aparece cuando llevas una pocion y cura 2d4 + 6 antes de que el enemigo responda."
+      },
+      {
+        question: "Como se calculan los puntajes?",
+        answer: "Tu puntaje suma nivel x 100, experiencia, peleas ganadas x 75, decisiones x 15, logros x 50, oro x 5, suministros x 10 y equipo x 10. Terminar una ruta suma 1000. Algunos objetos importantes dan bonificaciones: la muneca, el orbe de magistone y los mapas. Morir resta 200."
+      },
+      {
+        question: "Cuando puedo enviar un puntaje?",
+        answer: "Puedes enviar un puntaje desde Game Over o desde un final de capitulo. Cada partida guardada solo puede enviarse una vez."
+      },
+      {
+        question: "Que hacen los premios de nivel?",
+        answer: "Gain HP aumenta la vida maxima y actual. Gain AC hace que seas mas dificil de golpear. Gain Damage aumenta tu bono de dano. Full Heal restaura toda tu vida."
+      },
+      {
+        question: "Como funcionan las cuentas y guardados?",
+        answer: "Los invitados guardan en este navegador. Si inicias sesion, el juego tambien intenta guardar tus estadisticas y partida en la nube para usarlas despues."
+      }
+    ] : [
+      {
+        question: "What do the attack options do?",
+        answer: "Attack uses your normal number of attacks. Heavy Attack makes one stronger swing, but takes -2 on the hit roll. Dodge raises your AC for that enemy turn. Run tries to escape with a sneak roll. Health Potion appears when you have one and heals 2d4 + 6 before the enemy responds."
+      },
+      {
+        question: "How are leaderboard scores calculated?",
+        answer: "Your score adds level x 100, experience, fights won x 75, decisions x 15, achievements x 50, gold x 5, supplies x 10, and gear x 10. Reaching an ending adds 1000. Key items can add bonuses too: the doll, magistone orb, and maps. Dying subtracts 200."
+      },
+      {
+        question: "When can I submit a score?",
+        answer: "You can submit from Game Over or from a chapter ending. Each saved run can only submit once."
+      },
+      {
+        question: "What do level-up rewards do?",
+        answer: "Gain HP raises max HP and current HP. Gain AC makes you harder to hit. Gain Damage increases your damage bonus. Full Heal restores you to max HP."
+      },
+      {
+        question: "How do accounts and saves work?",
+        answer: "Guests save in this browser. Signed-in players stay signed in unless they log out, and the game also tries to sync stats and saves to the cloud."
+      }
+    ];
+    return entries.map((entry) => `
+      <article class="faq-entry">
+        <h3>${escapeHtml(entry.question)}</h3>
+        <p>${escapeHtml(entry.answer)}</p>
+      </article>
+    `).join("");
   }
 
   function showStart() {
