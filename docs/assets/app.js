@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.5";
+  const VERSION = "0.7.6";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -41,11 +41,22 @@
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
-      loginScreen: "Login or play as a guest",
-      loginPrompt: "Enter your display name:",
-      login: "Login",
+      loginScreen: "Sign in, create an account, or play as a guest",
+      displayNamePrompt: "Choose a public username:",
+      emailPrompt: "Email address:",
+      passwordPrompt: "Password:",
+      loginPrompt: "Email address:",
+      login: "Sign In",
+      createAccount: "Create Account",
+      logout: "Logout",
       playAsGuest: "Play as Guest",
       guest: "Guest",
+      accountCreated: "Account created. If Supabase asks for email confirmation, check your email before signing in.",
+      loginFailed: "Sign in failed. Check your email and password.",
+      signupFailed: "Account creation failed. The email may already be used, or Supabase may require a stronger password.",
+      logoutDone: "Signed out.",
+      cloudLoaded: "Cloud save loaded.",
+      cloudSaved: "Cloud save updated.",
       accountLabel: "Player: {name}",
       moveOn: "Move on"
     },
@@ -78,11 +89,22 @@
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
-      loginScreen: "Inicia sesion o juega como invitado",
-      loginPrompt: "Ingresa tu nombre publico:",
+      loginScreen: "Inicia sesion, crea una cuenta o juega como invitado",
+      displayNamePrompt: "Elige un nombre publico:",
+      emailPrompt: "Correo electronico:",
+      passwordPrompt: "Contrasena:",
+      loginPrompt: "Correo electronico:",
       login: "Iniciar sesion",
+      createAccount: "Crear cuenta",
+      logout: "Cerrar sesion",
       playAsGuest: "Jugar como invitado",
       guest: "Invitado",
+      accountCreated: "Cuenta creada. Si Supabase pide confirmacion por correo, revisa tu correo antes de iniciar sesion.",
+      loginFailed: "No se pudo iniciar sesion. Revisa tu correo y contrasena.",
+      signupFailed: "No se pudo crear la cuenta. Puede que el correo ya exista o que la contrasena sea debil.",
+      logoutDone: "Sesion cerrada.",
+      cloudLoaded: "Guardado en la nube cargado.",
+      cloudSaved: "Guardado en la nube actualizado.",
       accountLabel: "Jugador: {name}",
       moveOn: "Continuar"
     }
@@ -312,8 +334,15 @@
       const fallback = await fetch("../assets/data/en.json");
       state.text = await fallback.json();
     }
+    if (state.account && !state.account.guest) {
+      await loadCloudData();
+    }
     drawShell();
-    showLoginScreen();
+    if (state.account) {
+      showStart();
+    } else {
+      showLoginScreen();
+    }
   }
 
   function drawShell() {
@@ -408,43 +437,110 @@
   function showStart() {
     const stats = plotText();
     write(t("story.start", { stats }), true);
-    setChoices([
+    const choices = [
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.load_game"), loadGame),
       choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.quit"), () => write("You can close this browser tab whenever you are ready."))
-    ]);
+    ];
+    if (state.account && !state.account.guest) {
+      choices.splice(3, 0, choice(ui.logout, logout));
+    }
+    setChoices(choices);
   }
 
   function showLoginScreen() {
     state.player = null;
     write(ui.loginScreen, true);
     setChoices([
-      choice(ui.login, login),
+      choice(ui.login, signIn),
+      choice(ui.createAccount, createAccount),
       choice(ui.playAsGuest, playAsGuest)
     ]);
   }
 
-  function login() {
-    const previousName = state.account && !state.account.guest ? state.account.name : "";
-    const playerName = window.prompt(ui.loginPrompt, previousName);
-    if (!playerName) {
+  async function signIn() {
+    const email = promptText(ui.loginPrompt, state.account && state.account.email ? state.account.email : "");
+    if (!email) {
       return;
     }
-    const cleanName = playerName.trim().slice(0, 32);
-    if (!cleanName) {
+    const password = promptText(ui.passwordPrompt, "");
+    if (!password) {
       return;
     }
-    state.account = { name: cleanName, guest: false };
-    localStorage.setItem(`${storagePrefix}account`, JSON.stringify(state.account));
-    localStorage.setItem(`${storagePrefix}leaderboardName`, cleanName);
-    showStart();
+    try {
+      const session = await authRequest("token?grant_type=password", {
+        email,
+        password
+      });
+      setAuthenticatedAccount(session);
+      await loadCloudData();
+      showStart();
+    } catch {
+      write(ui.loginFailed);
+    }
+  }
+
+  async function createAccount() {
+    const displayName = promptText(ui.displayNamePrompt, "");
+    if (!displayName) {
+      return;
+    }
+    const email = promptText(ui.emailPrompt, "");
+    if (!email) {
+      return;
+    }
+    const password = promptText(ui.passwordPrompt, "");
+    if (!password) {
+      return;
+    }
+    try {
+      const session = await authRequest("signup", {
+        email,
+        password,
+        data: { display_name: displayName }
+      });
+      if (session.access_token) {
+        setAuthenticatedAccount(session, displayName);
+        await saveProfile();
+        await saveCloudData();
+        showStart();
+      } else {
+        state.account = {
+          name: displayName.trim().slice(0, 32),
+          email,
+          guest: false,
+          pendingConfirmation: true
+        };
+        localStorage.setItem(`${storagePrefix}account`, JSON.stringify(state.account));
+        localStorage.setItem(`${storagePrefix}leaderboardName`, state.account.name);
+        write(ui.accountCreated, true);
+        setChoices([
+          choice(ui.login, signIn),
+          choice(ui.playAsGuest, playAsGuest)
+        ]);
+      }
+    } catch {
+      write(ui.signupFailed);
+    }
   }
 
   function playAsGuest() {
     state.account = { name: ui.guest, guest: true };
     localStorage.removeItem(`${storagePrefix}account`);
     showStart();
+  }
+
+  async function logout() {
+    state.account = null;
+    state.player = null;
+    localStorage.removeItem(`${storagePrefix}account`);
+    write(ui.logoutDone, true);
+    setChoices([
+      choice(ui.login, signIn),
+      choice(ui.createAccount, createAccount),
+      choice(ui.playAsGuest, playAsGuest)
+    ]);
   }
 
   function showCharacterSelect() {
@@ -1621,7 +1717,8 @@
       achievements_unlocked: achievementsUnlocked,
       forest_attempts: state.player.flags.forestAttempts || 0,
       route: scoreRoute(),
-      language: lang
+      language: lang,
+      user_id: isCloudAccount() ? state.account.id : null
     };
   }
 
@@ -1679,14 +1776,128 @@
   function supabaseHeaders() {
     return {
       apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`
+      Authorization: `Bearer ${authToken()}`
     };
+  }
+
+  async function authRequest(path, body) {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/${path}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error_description || payload.msg || "Auth request failed");
+    }
+    return payload;
+  }
+
+  function setAuthenticatedAccount(session, fallbackName = "") {
+    const metadataName = session.user && session.user.user_metadata ? session.user.user_metadata.display_name : "";
+    const name = (metadataName || fallbackName || session.user.email || ui.guest).trim().slice(0, 32);
+    state.account = {
+      id: session.user.id,
+      email: session.user.email,
+      name,
+      guest: false,
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token || ""
+    };
+    localStorage.setItem(`${storagePrefix}account`, JSON.stringify(state.account));
+    localStorage.setItem(`${storagePrefix}leaderboardName`, name);
+  }
+
+  function authToken() {
+    return state.account && state.account.accessToken ? state.account.accessToken : SUPABASE_KEY;
+  }
+
+  function isCloudAccount() {
+    return Boolean(state.account && !state.account.guest && state.account.accessToken && state.account.id);
+  }
+
+  async function saveProfile() {
+    if (!isCloudAccount()) {
+      return;
+    }
+    await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?on_conflict=user_id`, {
+      method: "POST",
+      headers: {
+        ...supabaseHeaders(),
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify({
+        user_id: state.account.id,
+        display_name: state.account.name,
+        updated_at: new Date().toISOString()
+      })
+    });
+  }
+
+  async function loadCloudData() {
+    if (!isCloudAccount()) {
+      return;
+    }
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/user_game_data?select=stats,saved_game,settings&user_id=eq.${state.account.id}&limit=1`, {
+        headers: supabaseHeaders()
+      });
+      if (!response.ok) {
+        return;
+      }
+      const rows = await response.json();
+      if (!rows.length) {
+        return;
+      }
+      if (rows[0].stats) {
+        state.stats = rows[0].stats;
+        localStorage.setItem(`${storagePrefix}stats`, JSON.stringify(state.stats));
+      }
+      if (rows[0].saved_game) {
+        localStorage.setItem(`${storagePrefix}${lang}.save`, JSON.stringify(rows[0].saved_game));
+      }
+    } catch {
+      // Cloud sync is best-effort so the game stays playable offline.
+    }
+  }
+
+  async function saveCloudData() {
+    if (!isCloudAccount()) {
+      return;
+    }
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_game_data?on_conflict=user_id`, {
+        method: "POST",
+        headers: {
+          ...supabaseHeaders(),
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify({
+          user_id: state.account.id,
+          stats: state.stats,
+          saved_game: state.player,
+          settings: { language: lang },
+          updated_at: new Date().toISOString()
+        })
+      });
+    } catch {
+      // Keep local saves working even if the network is unavailable.
+    }
   }
 
   function loadAccount() {
     try {
       const saved = localStorage.getItem(`${storagePrefix}account`);
-      return saved ? JSON.parse(saved) : null;
+      const account = saved ? JSON.parse(saved) : null;
+      if (account && !account.guest && !account.accessToken) {
+        return null;
+      }
+      return account;
     } catch {
       return null;
     }
@@ -1718,6 +1929,7 @@
   function saveGame() {
     if (state.player) {
       localStorage.setItem(`${storagePrefix}${lang}.save`, JSON.stringify(state.player));
+      saveCloudData();
       writeKey("ui.game_saved");
     }
   }
@@ -1754,6 +1966,12 @@
 
   function saveStats() {
     localStorage.setItem(`${storagePrefix}stats`, JSON.stringify(state.stats));
+    saveCloudData();
+  }
+
+  function promptText(message, fallback) {
+    const value = window.prompt(message, fallback);
+    return value ? value.trim() : "";
   }
 
   function loadJson(key, fallback) {

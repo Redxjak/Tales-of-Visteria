@@ -2,7 +2,7 @@
 
 A simple GUI dark fantasy adventure.
 
-Current version: **0.7.5**
+Current version: **0.7.6**
 
 ## Content warning
 
@@ -41,9 +41,11 @@ For another language, copy `translations/en.json` to a new file, keep the same k
 
 ## Online accounts and leaderboard
 
-Version 0.7.5 adds browser user accounts and public leaderboard support through Supabase.
+Version 0.7.6 adds Supabase email/password accounts, cloud user data, and public leaderboard support for the browser version.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
+
+Public usernames are stored in `user_profiles`, and cloud stats/save data are stored in `user_game_data`. Guest play still uses local browser storage only.
 
 ## Current chapter
 
