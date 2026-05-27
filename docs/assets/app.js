@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.7";
+  const VERSION = "0.7.8";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
