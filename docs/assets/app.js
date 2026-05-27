@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.11";
+  const VERSION = "0.7.12";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -17,6 +17,7 @@
     en: {
       english: "English",
       spanish: "Spanish",
+      language: "Language",
       characterSheet: "Character Sheet",
       plotDevelopment: "Plot Development",
       noCharacter: "No character selected.\n\nStart a new game or load a save.",
@@ -74,6 +75,7 @@
     es: {
       english: "Inglés",
       spanish: "Español",
+      language: "Idioma",
       characterSheet: "Hoja de personaje",
       plotDevelopment: "Desarrollo de la trama",
       noCharacter: "No hay personaje seleccionado.\n\nEmpieza una nueva partida o carga una partida guardada.",
@@ -385,11 +387,16 @@
           <span class="version">v${VERSION}</span>
         </div>
         <div class="meta-row">
-          <a class="lang-link" href="../en/">${ui.english}</a>
-          <a class="lang-link" href="../es/">${ui.spanish}</a>
           <details id="account-menu" class="account-menu">
             <summary aria-label="${ui.accountMenu}"><span id="account-status"></span></summary>
             <div class="account-menu-panel">
+              <div class="account-language-group">
+                <p>${ui.language}</p>
+                <div class="account-language-options">
+                  <a class="account-language-link" href="../en/">${ui.english}</a>
+                  <a class="account-language-link" href="../es/">${ui.spanish}</a>
+                </div>
+              </div>
               <button id="menu-save" type="button">${t("choice.save")}</button>
               <button id="menu-load" type="button">${t("choice.load_game")}</button>
               <button id="menu-leaderboard" type="button">${ui.leaderboard}</button>
@@ -577,9 +584,10 @@
       return;
     }
     if (menu) {
-      menu.hidden = !state.account;
+      menu.hidden = false;
     }
     saveButton.disabled = !state.player;
+    logoutButton.disabled = !state.account;
     saveButton.onclick = () => runAccountMenuAction(saveGame);
     loadButton.onclick = () => runAccountMenuAction(loadGame);
     leaderboardButton.onclick = () => runAccountMenuAction(showLeaderboard);
@@ -2261,7 +2269,7 @@
   }
 
   function accountStatusText() {
-    return state.account ? state.account.name : ui.guest;
+    return state.account ? state.account.name : ui.login;
   }
 
   function preferredLeaderboardName() {
