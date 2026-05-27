@@ -1,6 +1,6 @@
 # Tales of Visteria
 
-A simple GUI dark fantasy adventure.
+A browser-based dark fantasy adventure.
 
 Current version: **0.7.7**
 
@@ -15,29 +15,11 @@ Browser version:
 - English: [https://redxjak.github.io/ToV/en](https://redxjak.github.io/ToV/en)
 - Spanish: [https://redxjak.github.io/ToV/es](https://redxjak.github.io/ToV/es)
 
-Download or run the latest Windows executable:
-
-[TalesofVisteria.exe](dist/TalesofVisteria.exe)
-
-Run the game from this folder:
-
-```powershell
-python game.py
-```
-
-If your computer uses the Python launcher instead:
-
-```powershell
-py game.py
-```
-
-On Windows, you can also double-click `Tales of Visteria.pyw` to launch the GUI without a console window.
-
 ## Text and translations
 
-Story and UI text are loaded from `translations/en.json`, with the Spanish pass maintained in `translations/es.json`.
+Story and UI text are loaded by the browser version from `docs/assets/data/en.json`, with the Spanish pass maintained in `docs/assets/data/es.json`.
 
-For another language, copy `translations/en.json` to a new file, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes.
+For another language, copy `docs/assets/data/en.json` to a new file, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes.
 
 ## Online accounts and leaderboard
 
@@ -51,7 +33,7 @@ Public usernames are stored in `user_profiles`, and cloud stats/save data are st
 
 The playable opening includes:
 
-- Windowed start screen with new game, load game, and quit
+- Browser start screen with login, guest play, new game, and load game
 - Character selection with Cletus the Warrior, Ren the Ranger, Cal the Scholar, Kili the Dwarf, and Jon the DM
 - Special Jon the DM route based on the Visio map
 - A caravan attack and forced escape
@@ -62,7 +44,6 @@ The playable opening includes:
 - Doll choice after the pale girl disappears
 - City or barracks route, feeding into the residential area
 - Bridge, warehouse ritual, and production area finale
-- Basic save/load using `savegame.json`
 - Browser version with user accounts and leaderboards
-- English story/UI text loaded from `translations/en.json`, ready for additional language files
-- Monster references loaded from `monster_stats.json`, generated from the D&D monster stats spreadsheet
+- English story/UI text loaded from `docs/assets/data/en.json`, ready for additional language files
+- Monster references included in the browser game data

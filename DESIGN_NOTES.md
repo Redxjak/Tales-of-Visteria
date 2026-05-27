@@ -93,7 +93,7 @@ Source: `C:\Users\derri\Downloads\Tales of Visteria.vsdx`
 ## Current Endpoint In Diagram
 
 - The diagram currently ends after the city/barracks branch with a note that this is the end so far.
-- The current Python prototype continues past this into:
+- The current browser version continues past this into:
   - Residential area.
   - Bridge.
   - Warehouse ritual.
@@ -101,7 +101,7 @@ Source: `C:\Users\derri\Downloads\Tales of Visteria.vsdx`
 
 ## Implementation Notes
 
-- Current script already supports:
+- Current browser game already supports:
   - Start screen.
   - New/load game.
   - Cletus, Cal, Ren, Kili, and Jon.
