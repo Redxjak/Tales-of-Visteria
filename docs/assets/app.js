@@ -388,6 +388,7 @@
               <button id="menu-load" type="button">${t("choice.load_game")}</button>
               <button id="menu-leaderboard" type="button">${ui.leaderboard}</button>
               <button id="menu-faq" type="button">${ui.faq}</button>
+              <button id="menu-quit" type="button">${t("choice.quit")}</button>
               <button id="menu-logout" type="button">${ui.logout}</button>
             </div>
           </details>
@@ -484,7 +485,7 @@
     document.getElementById("sheet").innerHTML = sheetText();
     document.getElementById("plot").textContent = plotText();
     document.getElementById("log-content").innerHTML = state.logParts.length ? state.logParts.join("") : escapeHtml(ui.emptyLog);
-    document.getElementById("log-button").onclick = showLog;
+    document.getElementById("log-button").onclick = toggleLog;
     document.getElementById("close-log").onclick = hideLog;
     document.getElementById("log-panel").hidden = !state.logVisible;
     document.getElementById("faq-content").innerHTML = faqHtml();
@@ -521,6 +522,14 @@
     }
   }
 
+  function toggleLog() {
+    if (state.logVisible) {
+      hideLog();
+    } else {
+      showLog();
+    }
+  }
+
   function hideLog() {
     state.logVisible = false;
     const panel = document.getElementById("log-panel");
@@ -552,8 +561,9 @@
     const loadButton = document.getElementById("menu-load");
     const leaderboardButton = document.getElementById("menu-leaderboard");
     const faqButton = document.getElementById("menu-faq");
+    const quitButton = document.getElementById("menu-quit");
     const logoutButton = document.getElementById("menu-logout");
-    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !logoutButton) {
+    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !quitButton || !logoutButton) {
       return;
     }
     if (menu) {
@@ -564,6 +574,7 @@
     loadButton.onclick = () => runAccountMenuAction(loadGame);
     leaderboardButton.onclick = () => runAccountMenuAction(showLeaderboard);
     faqButton.onclick = () => runAccountMenuAction(showFaq);
+    quitButton.onclick = () => runAccountMenuAction(quitGame);
     logoutButton.onclick = () => runAccountMenuAction(logout);
   }
 
@@ -634,9 +645,13 @@
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.load_game"), loadGame),
       choice(ui.leaderboard, showLeaderboard),
-      choice(t("choice.quit"), () => write("You can close this browser tab whenever you are ready."))
+      choice(t("choice.quit"), quitGame)
     ];
     setChoices(choices);
+  }
+
+  function quitGame() {
+    write("You can close this browser tab whenever you are ready.");
   }
 
   function showLoginScreen() {
