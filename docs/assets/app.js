@@ -47,6 +47,7 @@
       passwordPrompt: "Password:",
       loginPrompt: "Email address:",
       login: "Sign In",
+      googleLogin: "Sign in with Google",
       createAccount: "Create Account",
       logout: "Logout",
       playAsGuest: "Play as Guest",
@@ -58,6 +59,10 @@
       cloudLoaded: "Cloud save loaded.",
       cloudSaved: "Cloud save updated.",
       accountLabel: "Player: {name}",
+      accountMenu: "Account menu",
+      log: "Log",
+      closeLog: "Close",
+      emptyLog: "No story log yet.",
       moveOn: "Move on"
     },
     es: {
@@ -95,6 +100,7 @@
       passwordPrompt: "Contrasena:",
       loginPrompt: "Correo electronico:",
       login: "Iniciar sesion",
+      googleLogin: "Iniciar sesion con Google",
       createAccount: "Crear cuenta",
       logout: "Cerrar sesion",
       playAsGuest: "Jugar como invitado",
@@ -106,6 +112,10 @@
       cloudLoaded: "Guardado en la nube cargado.",
       cloudSaved: "Guardado en la nube actualizado.",
       accountLabel: "Jugador: {name}",
+      accountMenu: "Menu de cuenta",
+      log: "Registro",
+      closeLog: "Cerrar",
+      emptyLog: "Todavia no hay registro.",
       moveOn: "Continuar"
     }
   };
@@ -316,7 +326,13 @@
     stats: loadJson("stats", defaultStats()),
     combat: null,
     storyParts: [],
+    logParts: [],
+    logVisible: false,
     showGameOverImage: false,
+    awaitingLevelReward: false,
+    pendingChoices: null,
+    pendingLevelContinuation: null,
+    oauthLoginFailed: false,
     account: loadAccount(),
     leaderboard: [],
     choices: []
@@ -334,7 +350,9 @@
       const fallback = await fetch("../assets/data/en.json");
       state.text = await fallback.json();
     }
+    await handleOAuthRedirect();
     if (state.account && !state.account.guest) {
+      await refreshAccountSession();
       await loadCloudData();
     }
     drawShell();
@@ -342,6 +360,9 @@
       showStart();
     } else {
       showLoginScreen();
+      if (state.oauthLoginFailed) {
+        write(ui.loginFailed);
+      }
     }
   }
 
@@ -355,7 +376,16 @@
         <div class="meta-row">
           <a class="lang-link" href="../en/">${ui.english}</a>
           <a class="lang-link" href="../es/">${ui.spanish}</a>
-          <span id="account-status" class="account-status"></span>
+          <details id="account-menu" class="account-menu">
+            <summary aria-label="${ui.accountMenu}"><span id="account-status"></span></summary>
+            <div class="account-menu-panel">
+              <button id="menu-save" type="button">${t("choice.save")}</button>
+              <button id="menu-load" type="button">${t("choice.load_game")}</button>
+              <button id="menu-leaderboard" type="button">${ui.leaderboard}</button>
+              <button id="menu-logout" type="button">${ui.logout}</button>
+            </div>
+          </details>
+          <button id="log-button" class="utility-button" type="button">${ui.log}</button>
         </div>
         <div id="status" class="status"></div>
       </header>
@@ -371,6 +401,13 @@
           <h2 class="panel-title">${ui.plotDevelopment}</h2>
           <div id="plot" class="plot"></div>
         </aside>
+      </section>
+      <section id="log-panel" class="embedded-log" hidden>
+        <div class="log-header">
+          <h2 id="log-title">${ui.log}</h2>
+          <button id="close-log" class="utility-button" type="button">${ui.closeLog}</button>
+        </div>
+        <div id="log-content" class="log-content"></div>
       </section>
       <nav id="choices" class="choices"></nav>
     `;
@@ -393,10 +430,15 @@
       state.storyParts = [];
       state.showGameOverImage = false;
     }
+    const escapedText = escapeHtml(text);
     if (state.storyParts.length) {
       state.storyParts.push("<hr>");
     }
-    state.storyParts.push(escapeHtml(text));
+    state.storyParts.push(escapedText);
+    if (state.logParts.length) {
+      state.logParts.push("<hr>");
+    }
+    state.logParts.push(escapedText);
     render();
   }
 
@@ -404,7 +446,12 @@
     write(t(key, vars), clear);
   }
 
-  function setChoices(choices) {
+  function setChoices(choices, force = false) {
+    if (state.awaitingLevelReward && !force) {
+      state.pendingChoices = choices;
+      render();
+      return;
+    }
     state.choices = choices;
     render();
   }
@@ -420,8 +467,13 @@
     }
     document.getElementById("status").textContent = statusText();
     document.getElementById("account-status").textContent = accountStatusText();
+    bindAccountMenu();
     document.getElementById("sheet").innerHTML = sheetText();
     document.getElementById("plot").textContent = plotText();
+    document.getElementById("log-content").innerHTML = state.logParts.length ? state.logParts.join("") : escapeHtml(ui.emptyLog);
+    document.getElementById("log-button").onclick = showLog;
+    document.getElementById("close-log").onclick = hideLog;
+    document.getElementById("log-panel").hidden = !state.logVisible;
     const choiceArea = document.getElementById("choices");
     choiceArea.innerHTML = "";
     state.choices.forEach((choice) => {
@@ -429,9 +481,63 @@
       button.className = "choice";
       button.type = "button";
       button.textContent = choice.label;
-      button.addEventListener("click", choice.action);
+      button.addEventListener("click", () => {
+        if (!choice.preserveScene) {
+          beginVisibleScene();
+        }
+        choice.action();
+      });
       choiceArea.appendChild(button);
     });
+  }
+
+  function beginVisibleScene() {
+    state.storyParts = [];
+    state.showGameOverImage = false;
+  }
+
+  function showLog() {
+    state.logVisible = true;
+    const panel = document.getElementById("log-panel");
+    if (panel) {
+      panel.hidden = false;
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function hideLog() {
+    state.logVisible = false;
+    const panel = document.getElementById("log-panel");
+    if (panel) {
+      panel.hidden = true;
+    }
+  }
+
+  function bindAccountMenu() {
+    const menu = document.getElementById("account-menu");
+    const saveButton = document.getElementById("menu-save");
+    const loadButton = document.getElementById("menu-load");
+    const leaderboardButton = document.getElementById("menu-leaderboard");
+    const logoutButton = document.getElementById("menu-logout");
+    if (!saveButton || !loadButton || !leaderboardButton || !logoutButton) {
+      return;
+    }
+    if (menu) {
+      menu.hidden = !state.account;
+    }
+    saveButton.disabled = !state.player;
+    saveButton.onclick = () => runAccountMenuAction(saveGame);
+    loadButton.onclick = () => runAccountMenuAction(loadGame);
+    leaderboardButton.onclick = () => runAccountMenuAction(showLeaderboard);
+    logoutButton.onclick = () => runAccountMenuAction(logout);
+  }
+
+  function runAccountMenuAction(action) {
+    const menu = document.getElementById("account-menu");
+    if (menu) {
+      menu.open = false;
+    }
+    action();
   }
 
   function showStart() {
@@ -443,9 +549,6 @@
       choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.quit"), () => write("You can close this browser tab whenever you are ready."))
     ];
-    if (state.account && !state.account.guest) {
-      choices.splice(3, 0, choice(ui.logout, logout));
-    }
     setChoices(choices);
   }
 
@@ -454,6 +557,7 @@
     write(ui.loginScreen, true);
     setChoices([
       choice(ui.login, signIn),
+      choice(ui.googleLogin, signInWithGoogle),
       choice(ui.createAccount, createAccount),
       choice(ui.playAsGuest, playAsGuest)
     ]);
@@ -525,6 +629,15 @@
     }
   }
 
+  function signInWithGoogle() {
+    const redirectTo = window.location.href.split("#")[0];
+    const params = new URLSearchParams({
+      provider: "google",
+      redirect_to: redirectTo
+    });
+    window.location.href = `${SUPABASE_URL}/auth/v1/authorize?${params.toString()}`;
+  }
+
   function playAsGuest() {
     state.account = { name: ui.guest, guest: true };
     localStorage.removeItem(`${storagePrefix}account`);
@@ -538,6 +651,7 @@
     write(ui.logoutDone, true);
     setChoices([
       choice(ui.login, signIn),
+      choice(ui.googleLogin, signInWithGoogle),
       choice(ui.createAccount, createAccount),
       choice(ui.playAsGuest, playAsGuest)
     ]);
@@ -1477,7 +1591,9 @@
     ensureScoreState();
     state.player.score.fightsWon += 1;
     const xp = combat.enemies.reduce((total, enemy) => total + enemy.xp, 0);
-    awardXp(xp, "combat");
+    if (awardXp(xp, "combat", combat.onWin)) {
+      return;
+    }
     if (combat.onWin) {
       combat.onWin();
     }
@@ -1502,9 +1618,9 @@
     awardXp(decisionXp[reason] || 0, reason);
   }
 
-  function awardXp(amount, reason) {
+  function awardXp(amount, reason, continuation = null) {
     if (!state.player || state.player.class === "dm" || amount <= 0) {
-      return;
+      return false;
     }
     state.player.experience += amount;
     writeKey("story.xp_gain", { amount, reason: xpReasons[reason] || reason });
@@ -1514,12 +1630,16 @@
       state.player.xpToNext = BASE_XP_TO_NEXT + Math.max(0, state.player.level - BASE_LEVEL) * XP_PER_LEVEL;
       state.player.maxHealth += 2;
       state.player.health += 2;
+      state.pendingLevelContinuation = continuation;
+      state.pendingChoices = null;
       showLevelUpChoices();
-      return;
+      return true;
     }
+    return false;
   }
 
   function showLevelUpChoices() {
+    state.awaitingLevelReward = true;
     writeKey("story.level_up", { level: state.player.level });
     setChoices([
       choice(t("choice.level_hp"), () => {
@@ -1543,11 +1663,21 @@
         writeKey("story.level_heal");
         continueAfterLevel();
       })
-    ]);
+    ].map((levelChoice) => ({ ...levelChoice, preserveScene: true })), true);
   }
 
   function continueAfterLevel() {
-    if (state.combat) {
+    const continuation = state.pendingLevelContinuation;
+    const pendingChoices = state.pendingChoices;
+    state.awaitingLevelReward = false;
+    state.pendingLevelContinuation = null;
+    state.pendingChoices = null;
+    if (continuation) {
+      continuation();
+    } else if (pendingChoices) {
+      state.choices = pendingChoices;
+      render();
+    } else if (state.combat) {
       showCombatChoices();
     } else {
       render();
@@ -1632,8 +1762,9 @@
     write(ui.leaderboardLoading, true);
     setChoices([choice(t("choice.main_menu"), showStart)]);
     try {
+      await refreshAccountSession();
       const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}?select=player_name,character_name,score,ending_reached,fights_won,achievements_unlocked,created_at&order=score.desc&limit=25`, {
-        headers: supabaseHeaders()
+        headers: supabaseHeaders(true)
       });
       if (!response.ok) {
         throw new Error(`Leaderboard request failed: ${response.status}`);
@@ -1679,15 +1810,12 @@
     localStorage.setItem(`${storagePrefix}leaderboardName`, cleanName);
     const payload = leaderboardPayload(cleanName);
     try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}`, {
-        method: "POST",
-        headers: {
-          ...supabaseHeaders(),
-          "Content-Type": "application/json",
-          Prefer: "return=minimal"
-        },
-        body: JSON.stringify(payload)
-      });
+      await refreshAccountSession();
+      let response = await postLeaderboardScore(payload);
+      if (!response.ok && payload.user_id) {
+        delete payload.user_id;
+        response = await postLeaderboardScore(payload, true);
+      }
       if (!response.ok) {
         throw new Error(`Score submit failed: ${response.status}`);
       }
@@ -1703,10 +1831,22 @@
     }
   }
 
+  function postLeaderboardScore(payload, useAnonToken = false) {
+    return fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}`, {
+      method: "POST",
+      headers: {
+        ...supabaseHeaders(useAnonToken),
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+  }
+
   function leaderboardPayload(playerName) {
     ensureScoreState();
     const achievementsUnlocked = Object.keys(state.stats._achievements || {}).filter((key) => state.stats._achievements[key]).length;
-    return {
+    const payload = {
       player_name: playerName,
       character_name: state.player.name,
       character_class: state.player.title,
@@ -1717,9 +1857,12 @@
       achievements_unlocked: achievementsUnlocked,
       forest_attempts: state.player.flags.forestAttempts || 0,
       route: scoreRoute(),
-      language: lang,
-      user_id: isCloudAccount() ? state.account.id : null
+      language: lang
     };
+    if (isCloudAccount()) {
+      payload.user_id = state.account.id;
+    }
+    return payload;
   }
 
   function calculateScore(achievementsUnlocked) {
@@ -1773,10 +1916,10 @@
     return pieces.join(" | ");
   }
 
-  function supabaseHeaders() {
+  function supabaseHeaders(useAnonToken = false) {
     return {
       apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${authToken()}`
+      Authorization: `Bearer ${useAnonToken ? SUPABASE_KEY : authToken()}`
     };
   }
 
@@ -1796,16 +1939,58 @@
     return payload;
   }
 
+  async function handleOAuthRedirect() {
+    const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+    if (!hash) {
+      return;
+    }
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get("access_token");
+    if (!accessToken) {
+      return;
+    }
+    try {
+      const user = await authUserRequest(accessToken);
+      setAuthenticatedAccount({
+        access_token: accessToken,
+        refresh_token: params.get("refresh_token") || "",
+        expires_in: Number(params.get("expires_in") || 0),
+        user
+      });
+      await saveProfile();
+      window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    } catch {
+      state.oauthLoginFailed = true;
+      window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    }
+  }
+
+  async function authUserRequest(accessToken) {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.msg || "User request failed");
+    }
+    return payload;
+  }
+
   function setAuthenticatedAccount(session, fallbackName = "") {
-    const metadataName = session.user && session.user.user_metadata ? session.user.user_metadata.display_name : "";
-    const name = (metadataName || fallbackName || session.user.email || ui.guest).trim().slice(0, 32);
+    const user = session.user || state.account || {};
+    const metadataName = user.user_metadata ? user.user_metadata.display_name : "";
+    const name = (metadataName || fallbackName || state.account?.name || user.email || ui.guest).trim().slice(0, 32);
     state.account = {
-      id: session.user.id,
-      email: session.user.email,
+      id: user.id || state.account?.id || "",
+      email: user.email || state.account?.email || "",
       name,
       guest: false,
-      accessToken: session.access_token,
-      refreshToken: session.refresh_token || ""
+      accessToken: session.access_token || state.account?.accessToken || "",
+      refreshToken: session.refresh_token || state.account?.refreshToken || "",
+      expiresAt: session.expires_at ? session.expires_at * 1000 : Date.now() + (session.expires_in || 0) * 1000
     };
     localStorage.setItem(`${storagePrefix}account`, JSON.stringify(state.account));
     localStorage.setItem(`${storagePrefix}leaderboardName`, name);
@@ -1819,10 +2004,30 @@
     return Boolean(state.account && !state.account.guest && state.account.accessToken && state.account.id);
   }
 
+  async function refreshAccountSession(force = false) {
+    if (!state.account || state.account.guest || !state.account.refreshToken) {
+      return false;
+    }
+    const expiresAt = state.account.expiresAt || 0;
+    if (!force && expiresAt && expiresAt - Date.now() > 60000) {
+      return true;
+    }
+    try {
+      const session = await authRequest("token?grant_type=refresh_token", {
+        refresh_token: state.account.refreshToken
+      });
+      setAuthenticatedAccount(session, state.account.name);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function saveProfile() {
     if (!isCloudAccount()) {
       return;
     }
+    await refreshAccountSession();
     await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?on_conflict=user_id`, {
       method: "POST",
       headers: {
@@ -1843,6 +2048,7 @@
       return;
     }
     try {
+      await refreshAccountSession();
       const response = await fetch(`${SUPABASE_URL}/rest/v1/user_game_data?select=stats,saved_game,settings&user_id=eq.${state.account.id}&limit=1`, {
         headers: supabaseHeaders()
       });
@@ -1870,6 +2076,7 @@
       return;
     }
     try {
+      await refreshAccountSession();
       await fetch(`${SUPABASE_URL}/rest/v1/user_game_data?on_conflict=user_id`, {
         method: "POST",
         headers: {
@@ -1894,9 +2101,6 @@
     try {
       const saved = localStorage.getItem(`${storagePrefix}account`);
       const account = saved ? JSON.parse(saved) : null;
-      if (account && !account.guest && !account.accessToken) {
-        return null;
-      }
       return account;
     } catch {
       return null;
@@ -1904,8 +2108,7 @@
   }
 
   function accountStatusText() {
-    const name = state.account ? state.account.name : ui.guest;
-    return format(ui.accountLabel, { name });
+    return state.account ? state.account.name : ui.guest;
   }
 
   function preferredLeaderboardName() {
@@ -2045,8 +2248,8 @@
     return lines.join("\n");
   }
 
-  function choice(label, action) {
-    return { label, action };
+  function choice(label, action, options = {}) {
+    return { label, action, ...options };
   }
 
   function escapeHtml(value) {

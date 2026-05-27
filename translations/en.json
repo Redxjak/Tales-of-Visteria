@@ -326,7 +326,7 @@
   "story.bridge_has_map": "\n\nThe old map showed a safe route through the bridge traps, but the parchment has crumbled from being handled too much.\nYou will need to follow the directions from memory.",
   "story.bridge_partial_map": "\n\nThe torn map reveals only the first two safe directions: LEFT, then UP. After that, you will have to trust your memory and nerve.",
   "story.bridge_no_map": "\n\nWithout a map or memorized directions, it may be impossible to safely cross.",
-  "story.bridge_temp_end": "\n\nCongratulations for making it this far.\n\nThe game is still in development. Keep checking for future updates.\n\nFuture plans include:\n- Spanish language translation\n- Conversion to browser game\n\nFuture chapters will cover:\n- Bridge\n- Orc camp\n- Castle\n- Throne room\n- Final boss fight\n- Treasure room",
+  "story.bridge_temp_end": "\n\nCongratulations for making it this far.\n\nThe game is still in development, but the opening route through Visteria is now playable.\n\nCompleted so far:\n- Character selection and DM opening\n- Caravan attack and escape routes\n- Cave, ghost girl, and doll choices\n- Barracks and merchant district routes\n- Residential district encounters\n- Manor, mimic house, and bridge approach\n\nStill planned:\n- Full bridge crossing chapter\n- Orc camp\n- Castle\n- Throne room\n- Final boss fight\n- Treasure room\n- Spanish language translation\n- Conversion to browser game",
   "story.bridge_prepare_success": "You bind wounds and steady your hands.",
   "story.bridge_prepare_fail": "You have no supplies left.",
   "story.warehouse_enter": "Inside the warehouse, robed figures circle an eldritch ritual.",
