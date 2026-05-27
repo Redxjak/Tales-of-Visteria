@@ -129,7 +129,7 @@
   "choice.drag_out": "Drag them out slimed and alive",
   "choice.chapter_complete": "The end so far",
 
-  "story.start": "Welcome to Tales of Visteria.\n\nA story DM'd by Jubikino\nAn adaptation made by Redxjak\n\nContent warning: vulgar language and dark fantasy themes.\n\n{stats}\n\nChoose New Game to begin, or Load Game to continue a saved journey.",
+  "story.start": "Welcome to Tales of Visteria.\n\nA story DM'd by Jubikino\nThe world of Visteria was created by MolarCapybara\nAn adaptation made by Redxjak\n\nContent warning: vulgar language and dark fantasy themes.\n\n{stats}\n\nChoose New Game to begin, or Load Game to continue a saved journey.",
   "story.character_select": "Choose your character.",
   "story.dm_intro": "You look down from above at the puny mortals whose fate you ultimately control. You see them in a caravan and decide they need some excitement.\n\nWhat trouble do you send?",
   "story.dm_send_hydra": "You send the hydra.\n\nHaha! Did you see the way their eyeballs popped from their skulls? \nThen the smell of their burning flesh, ah that was great... \n\nI should make some popcorn.",

@@ -2,7 +2,7 @@
 
 A simple GUI dark fantasy adventure.
 
-Current version: **0.7.0**
+Current version: **0.7.5**
 
 ## Content warning
 
@@ -17,7 +17,7 @@ Browser version:
 
 Download or run the latest Windows executable:
 
-[TalesofVisteria-v0.7.0.exe](dist/TalesofVisteria-v0.7.0.exe)
+[TalesofVisteria.exe](dist/TalesofVisteria.exe)
 
 Run the game from this folder:
 
@@ -39,9 +39,9 @@ Story and UI text are loaded from `translations/en.json`, with the Spanish pass 
 
 For another language, copy `translations/en.json` to a new file, keep the same keys, and translate only the values. The browser version already has `/en` and `/es` routes.
 
-## Online leaderboard
+## Online accounts and leaderboard
 
-The browser version can submit public display-name scores to Supabase.
+Version 0.7.5 adds browser user accounts and public leaderboard support through Supabase.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
@@ -61,5 +61,6 @@ The playable opening includes:
 - City or barracks route, feeding into the residential area
 - Bridge, warehouse ritual, and production area finale
 - Basic save/load using `savegame.json`
+- Browser version with user accounts and leaderboards
 - English story/UI text loaded from `translations/en.json`, ready for additional language files
 - Monster references loaded from `monster_stats.json`, generated from the D&D monster stats spreadsheet
