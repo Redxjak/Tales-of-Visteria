@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.8";
+  const VERSION = "0.7.9";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -1229,7 +1229,8 @@
         writeKey("story.combat_loot_map");
         awardMap();
         continueChapter("residential");
-      }
+      },
+      onRun: () => continueChapter("residential")
     });
   }
 
@@ -1278,7 +1279,8 @@
         writeKey("story.combat_loot_map");
         awardMap();
         continueChapter("residential");
-      }
+      },
+      onRun: () => continueChapter("residential")
     });
   }
 
@@ -1364,7 +1366,8 @@
   function manorCombat() {
     startCombat(["goblin", "goblin", "goblin", "goblin", "goblin", "orc", "orc"], "story.manor_combat_victory", {
       attackersPerRound: 1,
-      onWin: manorWin
+      onWin: manorWin,
+      onRun: goBridge
     });
   }
 
@@ -1418,7 +1421,8 @@
           choice(t("choice.return_street"), () => continueChapter("residential", true)),
           choice(t("choice.proceed_bridge"), goBridge)
         ]);
-      }
+      },
+      onRun: goBridge
     });
   }
 
@@ -1459,7 +1463,8 @@
           choice(t("choice.fight"), mimicFightTwo),
           choice(t("choice.flee"), mimicFlee)
         ]);
-      }
+      },
+      onRun: mimicFlee
     });
   }
 
@@ -1474,7 +1479,8 @@
         addItem("magistone orb");
         writeKey("story.mimic_house_escape");
         setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
-      }
+      },
+      onRun: mimicFlee
     });
   }
 
@@ -1649,7 +1655,7 @@
       if (onRun) {
         onRun();
       } else {
-        continueChapter("residential");
+        goBridge();
       }
     } else {
       writeKey("story.combat_run_fail");
