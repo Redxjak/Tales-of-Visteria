@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.9";
+  const VERSION = "0.8.0";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -801,6 +801,7 @@
         hasDoll: false,
         hasThroneMap: false,
         hasPartialMap: false,
+        bridgeRested: false,
         hasDwarvenAle: false,
         hasMagistoneOrb: false,
         completedRecorded: false,
@@ -1309,7 +1310,7 @@
   function residential(clear = false) {
     writeKey("story.residential_enter", {}, clear);
     writeKey("story.residential");
-    setChoices([
+    const choices = [
       choice(t("choice.large_manor"), () => {
         awardDecisionXp("residential_choice");
         largeManor();
@@ -1321,8 +1322,24 @@
       choice(t("choice.large_house"), () => {
         awardDecisionXp("residential_choice");
         mimicHouse();
-      }),
+      })
+    ];
+    if (!state.player.flags.bridgeRested) {
+      choices.push(choice(t("choice.rest"), restBeforeBridge));
+    }
+    choices.push(
       choice(t("choice.proceed_bridge"), () => goBridge())
+    );
+    setChoices(choices);
+  }
+
+  function restBeforeBridge() {
+    state.player.flags.bridgeRested = true;
+    state.player.health = state.player.maxHealth;
+    writeKey("story.residential_rest");
+    setChoices([
+      choice(t("choice.proceed_bridge"), goBridge),
+      choice(t("choice.save"), saveGame)
     ]);
   }
 
