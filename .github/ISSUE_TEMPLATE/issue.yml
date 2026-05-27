@@ -1,0 +1,38 @@
+name: Bug or Issue
+description: Report a problem in Tales of Visteria.
+title: "[Issue]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for reporting this. Clear steps make it much easier to fix."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the bug, confusing behavior, typo, broken flow, or balance problem.
+      placeholder: "Example: I ran from the manor fight and could retry the same encounter."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can it be reproduced?
+      description: List the choices or actions that led to the issue.
+      placeholder: "1. Start as Ren\n2. Go to the residential district\n3. Enter the Large Manor\n4. ..."
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      placeholder: "Example: v0.8.1"
+    validations:
+      required: false
+  - type: input
+    id: browser
+    attributes:
+      label: Browser/device
+      placeholder: "Example: Firefox on Windows"
+    validations:
+      required: false

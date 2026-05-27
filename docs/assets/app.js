@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.8.0";
+  const VERSION = "0.8.1";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -9,6 +9,8 @@
   const SUPABASE_URL = "https://fojkijwketpzxsbikmsl.supabase.co";
   const SUPABASE_KEY = "sb_publishable_pxMr-7kXAoQ9gz0mTTWLew_FAIRtAio";
   const LEADERBOARD_TABLE = "leaderboard_scores";
+  const SUGGESTION_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new?template=suggestion.yml";
+  const ISSUE_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new?template=issue.yml";
   const lang = document.body.dataset.language || "en";
   const storagePrefix = "tov.web.";
   const uiTextByLanguage = {
@@ -62,6 +64,8 @@
       accountMenu: "Account menu",
       faq: "FAQ",
       closeFaq: "Close FAQ",
+      suggest: "Suggest",
+      reportIssue: "Report Issue",
       log: "Log",
       closeLog: "Close",
       emptyLog: "No story log yet.",
@@ -117,6 +121,8 @@
       accountMenu: "Menu de cuenta",
       faq: "FAQ",
       closeFaq: "Cerrar FAQ",
+      suggest: "Sugerir",
+      reportIssue: "Reportar problema",
       log: "Registro",
       closeLog: "Cerrar",
       emptyLog: "Todavia no hay registro.",
@@ -388,6 +394,8 @@
               <button id="menu-load" type="button">${t("choice.load_game")}</button>
               <button id="menu-leaderboard" type="button">${ui.leaderboard}</button>
               <button id="menu-faq" type="button">${ui.faq}</button>
+              <button id="menu-suggest" type="button">${ui.suggest}</button>
+              <button id="menu-issue" type="button">${ui.reportIssue}</button>
               <button id="menu-quit" type="button">${t("choice.quit")}</button>
               <button id="menu-logout" type="button">${ui.logout}</button>
             </div>
@@ -561,9 +569,11 @@
     const loadButton = document.getElementById("menu-load");
     const leaderboardButton = document.getElementById("menu-leaderboard");
     const faqButton = document.getElementById("menu-faq");
+    const suggestButton = document.getElementById("menu-suggest");
+    const issueButton = document.getElementById("menu-issue");
     const quitButton = document.getElementById("menu-quit");
     const logoutButton = document.getElementById("menu-logout");
-    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !quitButton || !logoutButton) {
+    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !suggestButton || !issueButton || !quitButton || !logoutButton) {
       return;
     }
     if (menu) {
@@ -574,6 +584,8 @@
     loadButton.onclick = () => runAccountMenuAction(loadGame);
     leaderboardButton.onclick = () => runAccountMenuAction(showLeaderboard);
     faqButton.onclick = () => runAccountMenuAction(showFaq);
+    suggestButton.onclick = () => runAccountMenuAction(openSuggestionForm);
+    issueButton.onclick = () => runAccountMenuAction(openIssueForm);
     quitButton.onclick = () => runAccountMenuAction(quitGame);
     logoutButton.onclick = () => runAccountMenuAction(logout);
   }
@@ -584,6 +596,21 @@
       menu.open = false;
     }
     action();
+  }
+
+  function openSuggestionForm() {
+    openExternal(SUGGESTION_URL);
+  }
+
+  function openIssueForm() {
+    openExternal(ISSUE_URL);
+  }
+
+  function openExternal(url) {
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.location.href = url;
+    }
   }
 
   function faqHtml() {
@@ -645,6 +672,8 @@
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.load_game"), loadGame),
       choice(ui.leaderboard, showLeaderboard),
+      choice(ui.suggest, openSuggestionForm),
+      choice(ui.reportIssue, openIssueForm),
       choice(t("choice.quit"), quitGame)
     ];
     setChoices(choices);
