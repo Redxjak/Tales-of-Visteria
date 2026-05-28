@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.8.2";
-  const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
+  const VERSION = "0.8.3";
+  const BRIDGE_DIRECTIONS = ["left", "right", "up", "down"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
   const XP_PER_LEVEL = 50;
@@ -141,6 +141,7 @@
   };
   const ui = uiTextByLanguage[lang] || uiTextByLanguage.en;
   const fallbackText = {
+    "choice.fight_bridge_orcs": "Fight the Orcs",
     "choice.sneak_bridge": "Sneak Across the Bridge",
     "choice3.sneak_bridge": "Sneak Across the Bridge",
     "story.level_up_title": "Level up!",
@@ -290,7 +291,8 @@
       warehouse_survived: "Was it a dream?",
       high_ac: "Can't touch this",
       big_damage: "Unlimited powa",
-      maxed_out: "Maxed out"
+      maxed_out: "Maxed out",
+      all_day: "I can do this all day"
     },
     es: {
       first_fight: "Primera sangre",
@@ -310,7 +312,8 @@
       warehouse_survived: "¿Fue un sueño?",
       high_ac: "No puedes tocar esto",
       big_damage: "Powa ilimitado",
-      maxed_out: "Al máximo"
+      maxed_out: "Al máximo",
+      all_day: "Puedo hacer esto todo el día"
     }
   };
   const achievements = achievementsByLanguage[lang] || achievementsByLanguage.en;
@@ -951,6 +954,8 @@
         hasDoll: false,
         hasThroneMap: false,
         hasPartialMap: false,
+        bridgeRoute: randomBridgeRoute(),
+        bridgeNavigationStep: 0,
         bridgeXpAwarded: false,
         bridgeRested: false,
         hasDwarvenAle: false,
@@ -1455,7 +1460,7 @@
       unlock("ghost_ally");
       writeKey("story.persuade_high");
       awardDecisionXp("ghost_choice");
-      continueChapter("districts");
+      dollChoice();
     }
   }
 
@@ -1627,7 +1632,53 @@
 
   function awardMap() {
     state.player.flags.hasThroneMap = true;
-    writeKey("story.throne_map", { directions: MAP_DIRECTIONS.join(", ") });
+    writeKey("story.throne_map", { directions: bridgeDirectionList() });
+  }
+
+  function randomBridgeRoute() {
+    const route = [...BRIDGE_DIRECTIONS];
+    for (let i = route.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [route[i], route[j]] = [route[j], route[i]];
+    }
+    return route;
+  }
+
+  function bridgeRoute() {
+    if (!state.player.flags) {
+      state.player.flags = {};
+    }
+    if (!Array.isArray(state.player.flags.bridgeRoute) || state.player.flags.bridgeRoute.length !== BRIDGE_DIRECTIONS.length) {
+      state.player.flags.bridgeRoute = randomBridgeRoute();
+    }
+    return state.player.flags.bridgeRoute;
+  }
+
+  function bridgeDirectionLabel(direction) {
+    return t(`choice.${direction}`).toUpperCase();
+  }
+
+  function bridgeDirectionList(count = BRIDGE_DIRECTIONS.length) {
+    return bridgeRoute().slice(0, count).map(bridgeDirectionLabel).join(", ");
+  }
+
+  function fadeBridgeMapFromLog() {
+    const routeText = bridgeDirectionList();
+    const firstTwo = bridgeDirectionList(2);
+    const mapPhrases = [
+      "safe bridge path",
+      "safe route through the bridge traps",
+      "first two directions",
+      "first two safe directions",
+      "camino seguro del puente",
+      "ruta segura entre las trampas",
+      "primeras dos direcciones",
+      "primeras dos direcciones seguras"
+    ];
+    state.logParts = state.logParts.filter((part) => {
+      const lower = part.toLowerCase();
+      return !part.includes(routeText) && !part.includes(firstTwo) && !mapPhrases.some((phrase) => lower.includes(phrase));
+    });
   }
 
   function residential(clear = false) {
@@ -1832,7 +1883,10 @@
         state.player.flags.hasMagistoneOrb = true;
         addItem("torn bridge map");
         addItem("magistone orb");
-        writeKey("story.mimic_house_escape");
+        writeKey("story.mimic_house_escape", {
+          first: bridgeDirectionLabel(bridgeRoute()[0]),
+          second: bridgeDirectionLabel(bridgeRoute()[1])
+        });
         setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
       },
       onRun: mimicFlee
@@ -1880,32 +1934,82 @@
   function bridge(clear = false) {
     let text = t("story.bridge");
     if (state.player.flags.hasThroneMap) {
-      text += t("story.bridge_has_map");
+      text += t("story.bridge_has_map", { directions: bridgeDirectionList() });
     } else if (state.player.flags.hasPartialMap) {
-      text += t("story.bridge_partial_map");
+      text += t("story.bridge_partial_map", {
+        first: bridgeDirectionLabel(bridgeRoute()[0]),
+        second: bridgeDirectionLabel(bridgeRoute()[1])
+      });
     } else {
       text += t("story.bridge_no_map");
     }
     write(text, clear);
     setChoices([
       choice(t("choice.sneak_bridge"), bridgeSneak),
+      choice(t("choice.fight_bridge_orcs"), bridgeFightOrcs),
       choice(t("choice.save"), saveGame)
     ]);
+  }
+
+  function bridgeFightOrcs() {
+    writeKey("story.bridge_orc_fight_start");
+    startCombat(["orc", "orc", "orc", "orc"], "story.bridge_orc_fight_defeated", {
+      attackersPerRound: 2,
+      deathReason: "combat",
+      onWin: bridgeNavigationStart
+    });
   }
 
   function bridgeSneak() {
     writeKey("story.bridge_sneak_start");
     if (rollD20("sneak") >= 13) {
       writeKey("story.bridge_sneak_success");
-      warehouseRitual();
+      bridgeNavigationStart();
       return;
     }
     writeKey("story.bridge_sneak_fail");
     startCombat(["orc", "goblin", "goblin"], "story.bridge_patrol_defeated", {
       attackersPerRound: 2,
       deathReason: "combat",
-      onWin: warehouseRitual
+      onWin: bridgeNavigationStart
     });
+  }
+
+  function bridgeNavigationStart() {
+    state.player.flags.bridgeNavigationStep = 0;
+    fadeBridgeMapFromLog();
+    writeKey("story.bridge_navigation_start", {}, true);
+    showBridgeNavigationChoices();
+  }
+
+  function showBridgeNavigationChoices() {
+    const step = state.player.flags.bridgeNavigationStep + 1;
+    if (step > 1) {
+      writeKey("story.bridge_navigation_step", { step });
+    }
+    setChoices(BRIDGE_DIRECTIONS.map((direction) => (
+      choice(t(`choice.${direction}`), () => chooseBridgeDirection(direction))
+    )));
+  }
+
+  function chooseBridgeDirection(direction) {
+    const route = bridgeRoute();
+    const step = state.player.flags.bridgeNavigationStep || 0;
+    if (direction !== route[step]) {
+      writeKey("story.bridge_wrong");
+      state.player.gameOverReason = "bridge_trap";
+      state.player.health = 0;
+      gameOver();
+      return;
+    }
+    state.player.flags.bridgeNavigationStep = step + 1;
+    if (state.player.flags.bridgeNavigationStep >= route.length) {
+      writeKey("story.bridge_success");
+      warehouseRitual();
+      return;
+    }
+    writeKey("story.bridge_quiet");
+    showBridgeNavigationChoices();
   }
 
   function warehouseRitual() {
@@ -2590,10 +2694,18 @@
     if (state.player && !state.player.flags.deathRecorded) {
       state.stats[state.player.class].died += 1;
       state.player.flags.deathRecorded = true;
+      checkDeathAchievements();
       saveStats();
     }
     state.showGameOverImage = false;
     setChoices([choice(ui.deathScorePrompt, showGameOverScores)]);
+  }
+
+  function checkDeathAchievements() {
+    const totalDeaths = Object.keys(classes).reduce((total, key) => total + (state.stats[key] ? state.stats[key].died || 0 : 0), 0);
+    if (totalDeaths > 20) {
+      unlock("all_day");
+    }
   }
 
   function showGameOverScores() {
@@ -3036,6 +3148,12 @@
     }
     if (state.player.flags.bridgeXpAwarded === undefined) {
       state.player.flags.bridgeXpAwarded = false;
+    }
+    if (!Array.isArray(state.player.flags.bridgeRoute) || state.player.flags.bridgeRoute.length !== BRIDGE_DIRECTIONS.length) {
+      state.player.flags.bridgeRoute = randomBridgeRoute();
+    }
+    if (state.player.flags.bridgeNavigationStep === undefined) {
+      state.player.flags.bridgeNavigationStep = 0;
     }
     if (!state.player.upgrades) {
       state.player.upgrades = { ac: 0, damage: 0 };
