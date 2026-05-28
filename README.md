@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.7.7**
+Current version: **0.8.0**
 
 ## Content warning
 
@@ -23,7 +23,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.7.7 adds Supabase accounts, cloud user data, Google sign-in support, story log access, and public leaderboard support for the browser version.
+Version 0.8.0 expands the bridge into a major ritual sequence, adds the silver mask turning point, new achievements, embedded level-up choices, and score breakdowns on game over.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 

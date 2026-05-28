@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.7.12";
+  const VERSION = "0.8.0";
   const MAP_DIRECTIONS = ["LEFT", "UP", "RIGHT", "DOWN"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -271,7 +271,12 @@
       send_hydra: "Fuck Dem Kids",
       correct_chest_key: "Keyed In",
       mimic_nap: "Sleep Tight",
-      played_everyone: "Full Party"
+      played_everyone: "Full Party",
+      mask_on: "I'm feeling good!",
+      warehouse_survived: "Was it a dream?",
+      high_ac: "Can't touch this",
+      big_damage: "Unlimited powa",
+      maxed_out: "Maxed out"
     },
     es: {
       first_fight: "Primera sangre",
@@ -286,7 +291,12 @@
       send_hydra: "Al diablo con ellos",
       correct_chest_key: "La llave correcta",
       mimic_nap: "Duerme bien",
-      played_everyone: "Grupo completo"
+      played_everyone: "Grupo completo",
+      mask_on: "¡Me siento bien!",
+      warehouse_survived: "¿Fue un sueño?",
+      high_ac: "No puedes tocar esto",
+      big_damage: "Powa ilimitado",
+      maxed_out: "Al máximo"
     }
   };
   const achievements = achievementsByLanguage[lang] || achievementsByLanguage.en;
@@ -345,6 +355,7 @@
     faqVisible: false,
     showGameOverImage: false,
     awaitingLevelReward: false,
+    levelRewardChoices: [],
     pendingChoices: null,
     pendingLevelContinuation: null,
     oauthLoginFailed: false,
@@ -441,6 +452,13 @@
         <div id="faq-content" class="faq-content"></div>
       </section>
       <nav id="choices" class="choices"></nav>
+      <section id="level-modal" class="modal-overlay" hidden>
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="level-modal-title">
+          <h2 id="level-modal-title"></h2>
+          <p id="level-modal-body"></p>
+          <div id="level-modal-choices" class="modal-choices"></div>
+        </div>
+      </section>
     `;
   }
 
@@ -508,6 +526,7 @@
     document.getElementById("faq-content").innerHTML = faqHtml();
     document.getElementById("close-faq").onclick = hideFaq;
     document.getElementById("faq-panel").hidden = !state.faqVisible;
+    renderLevelModal();
     const choiceArea = document.getElementById("choices");
     choiceArea.innerHTML = "";
     state.choices.forEach((choice) => {
@@ -521,6 +540,29 @@
         }
         choice.action();
       });
+      choiceArea.appendChild(button);
+    });
+  }
+
+  function renderLevelModal() {
+    const modal = document.getElementById("level-modal");
+    if (!modal) {
+      return;
+    }
+    modal.hidden = !state.awaitingLevelReward;
+    if (!state.awaitingLevelReward) {
+      return;
+    }
+    document.getElementById("level-modal-title").textContent = t("story.level_up_title", { level: state.player.level });
+    document.getElementById("level-modal-body").textContent = t("story.level_up_body");
+    const choiceArea = document.getElementById("level-modal-choices");
+    choiceArea.innerHTML = "";
+    state.levelRewardChoices.forEach((levelChoice) => {
+      const button = document.createElement("button");
+      button.className = "choice";
+      button.type = "button";
+      button.textContent = levelChoice.label;
+      button.addEventListener("click", levelChoice.action);
       choiceArea.appendChild(button);
     });
   }
@@ -845,6 +887,7 @@
         maskPowerClaimed: false,
         bridgeEndMaskResolved: false,
         maskCorruption: 0,
+        orderQuestionsAsked: [],
         bridgeEndRested: false,
         completedRecorded: false,
         deathRecorded: false
@@ -1673,6 +1716,7 @@
 
   function applySilverMaskPower() {
     state.player.flags.maskCorruption = Math.max(state.player.flags.maskCorruption || 0, 1);
+    unlock("mask_on");
     if (!state.player.flags.maskPowerClaimed) {
       state.player.maxHealth += 6;
       state.player.health += 6;
@@ -1704,15 +1748,35 @@
       writeKey("story.order_mask_warning");
     }
     writeKey("story.order_arrival");
-    setChoices([
-      choice(t("choice.ask_who_order"), () => orderDialogue("who")),
-      choice(t("choice.ask_monster"), () => orderDialogue("monster")),
-      choice(t("choice.ask_why_here"), () => orderDialogue("why"))
-    ]);
+    state.player.flags.orderQuestionsAsked = [];
+    showOrderQuestionChoices();
+  }
+
+  function showOrderQuestionChoices() {
+    const asked = state.player.flags.orderQuestionsAsked || [];
+    const questions = [
+      ["who", "choice.ask_who_order"],
+      ["monster", "choice.ask_monster"],
+      ["why", "choice.ask_why_here"]
+    ];
+    setChoices(
+      questions
+        .filter(([topic]) => !asked.includes(topic))
+        .map(([topic, label]) => choice(t(label), () => orderDialogue(topic)))
+    );
   }
 
   function orderDialogue(topic) {
     writeKey(`story.order_dialogue_${topic}`);
+    const asked = state.player.flags.orderQuestionsAsked || [];
+    if (!asked.includes(topic)) {
+      asked.push(topic);
+    }
+    state.player.flags.orderQuestionsAsked = asked;
+    if (asked.length < 3) {
+      showOrderQuestionChoices();
+      return;
+    }
     writeKey("story.order_departure");
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.order_mask_missed_one");
@@ -1736,6 +1800,7 @@
     state.player.chapter = "bridgeEnd";
     writeKey("story.bridge_temp_end", {}, clear);
     resolveBridgeEndMask();
+    unlock("warehouse_survived");
     recordEnding();
     saveGame();
     showBridgeEndChoices();
@@ -1886,6 +1951,9 @@
         }
         currentTarget.hp -= damage;
         writeKey("story.combat_hit", { enemy: currentTarget.name, damage });
+        if (damage > 20) {
+          unlock("big_damage");
+        }
         if (currentTarget.hp <= 0) {
           writeKey("story.combat_enemy_drops", { enemy: currentTarget.name });
         }
@@ -1987,6 +2055,18 @@
     };
   }
 
+  function checkStatAchievements() {
+    if (!state.player || state.player.class === "dm") {
+      return;
+    }
+    if (combatStats().ac > 20) {
+      unlock("high_ac");
+    }
+    if (state.player.level >= 20) {
+      unlock("maxed_out");
+    }
+  }
+
   function awardDecisionXp(reason) {
     if (state.player) {
       ensureScoreState();
@@ -2004,6 +2084,9 @@
     while (state.player.experience >= state.player.xpToNext) {
       state.player.experience -= state.player.xpToNext;
       state.player.level += 1;
+      if (state.player.level >= 20) {
+        unlock("maxed_out");
+      }
       state.player.xpToNext = BASE_XP_TO_NEXT + Math.max(0, state.player.level - BASE_LEVEL) * XP_PER_LEVEL;
       state.player.maxHealth += 2;
       state.player.health += 2;
@@ -2017,8 +2100,7 @@
 
   function showLevelUpChoices() {
     state.awaitingLevelReward = true;
-    writeKey("story.level_up", { level: state.player.level });
-    setChoices([
+    state.levelRewardChoices = [
       choice(t("choice.level_hp"), () => {
         state.player.maxHealth += 5;
         state.player.health += 5;
@@ -2027,6 +2109,7 @@
       }),
       choice(t("choice.level_ac"), () => {
         state.player.upgrades.ac += 1;
+        checkStatAchievements();
         writeKey("story.level_ac");
         continueAfterLevel();
       }),
@@ -2040,13 +2123,15 @@
         writeKey("story.level_heal");
         continueAfterLevel();
       })
-    ].map((levelChoice) => ({ ...levelChoice, preserveScene: true })), true);
+    ];
+    render();
   }
 
   function continueAfterLevel() {
     const continuation = state.pendingLevelContinuation;
     const pendingChoices = state.pendingChoices;
     state.awaitingLevelReward = false;
+    state.levelRewardChoices = [];
     state.pendingLevelContinuation = null;
     state.pendingChoices = null;
     if (continuation) {
@@ -2125,7 +2210,9 @@
       saveStats();
     }
     const reason = state.player ? state.player.gameOverReason : "default";
-    write(`${t("story.game_over_header")}\n\n${t(`game_over.${reason}`)}\n\n${t("story.game_over_footer")}`, true);
+    const achievementsUnlocked = Object.keys(state.stats._achievements).filter((key) => state.stats._achievements[key]).length;
+    const scoreDetails = state.player ? scoreBreakdown(achievementsUnlocked) : { total: 0, lines: [] };
+    write(`${t("story.game_over_header")}\n\n${t(`game_over.${reason}`)}\n\n${t("story.final_score", { score: scoreDetails.total })}\n\n${t("story.score_breakdown_heading")}\n${scoreDetails.lines.join("\n")}\n\n${t("story.game_over_footer")}`, true);
     state.showGameOverImage = true;
     setChoices([
       choice(ui.submitScore, submitScore),
@@ -2243,37 +2330,51 @@
   }
 
   function calculateScore(achievementsUnlocked) {
+    return scoreBreakdown(achievementsUnlocked).total;
+  }
+
+  function scoreBreakdown(achievementsUnlocked) {
     const player = state.player;
-    let score = 0;
-    score += player.level * 100;
-    score += player.experience;
-    score += player.score.fightsWon * 75;
-    score += player.score.decisions * 15;
-    score += achievementsUnlocked * 50;
-    score += player.gold * 5;
-    score += player.supplies * 10;
-    score += player.gear.length * 10;
+    const lines = [];
+    let rawScore = 0;
+    const addLine = (labelKey, value, vars = {}) => {
+      rawScore += value;
+      lines.push(`${t(labelKey, vars)}: ${value >= 0 ? "+" : ""}${value}`);
+    };
+    addLine("score.level", player.level * 100, { level: player.level });
+    addLine("score.experience", player.experience);
+    addLine("score.fights_won", player.score.fightsWon * 75, { count: player.score.fightsWon });
+    addLine("score.decisions", player.score.decisions * 15, { count: player.score.decisions });
+    addLine("score.achievements", achievementsUnlocked * 50, { count: achievementsUnlocked });
+    addLine("score.gold", player.gold * 5, { count: player.gold });
+    addLine("score.supplies", player.supplies * 10, { count: player.supplies });
+    addLine("score.gear", player.gear.length * 10, { count: player.gear.length });
     if (player.flags.completedRecorded) {
-      score += 1000;
+      addLine("score.current_ending", 1000);
     }
     if (player.flags.hasDoll) {
-      score += 100;
+      addLine("score.cracked_doll", 100);
     }
     if (player.flags.hasMagistoneOrb) {
-      score += 150;
+      addLine("score.magistone_orb", 150);
     }
     if (player.flags.hasSilverMask) {
-      score += player.flags.wearingSilverMask ? 250 : 125;
+      addLine(player.flags.wearingSilverMask ? "score.wore_silver_mask" : "score.stored_silver_mask", player.flags.wearingSilverMask ? 250 : 125);
     }
     if (player.flags.hasThroneMap) {
-      score += 150;
+      addLine("score.throne_map", 150);
     } else if (player.flags.hasPartialMap) {
-      score += 75;
+      addLine("score.partial_bridge_map", 75);
     }
     if (player.flags.deathRecorded) {
-      score -= 200;
+      addLine("score.death_penalty", -200);
     }
-    return Math.max(0, Math.round(score));
+    const total = Math.max(0, Math.round(rawScore));
+    lines.push(`${t("story.score_raw_total")}: ${Math.round(rawScore)}`);
+    if (total !== Math.round(rawScore)) {
+      lines.push(`${t("story.score_minimum")}: ${total}`);
+    }
+    return { total, lines };
   }
 
   function scoreRoute() {
@@ -2534,6 +2635,9 @@
     if (state.player.flags.maskCorruption === undefined) {
       state.player.flags.maskCorruption = 0;
     }
+    if (!Array.isArray(state.player.flags.orderQuestionsAsked)) {
+      state.player.flags.orderQuestionsAsked = [];
+    }
     if (state.player.flags.bridgeEndRested === undefined) {
       state.player.flags.bridgeEndRested = false;
     }
@@ -2565,6 +2669,7 @@
     try {
       state.player = JSON.parse(saved);
       ensurePlayerState();
+      checkStatAchievements();
       writeKey("ui.loaded_game", {}, true);
       continueChapter(state.player.chapter || "caravan");
     } catch {
