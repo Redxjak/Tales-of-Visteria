@@ -39,6 +39,7 @@
       playerNamePrompt: "Name for the leaderboard:",
       scoreSubmitted: "Score submitted.",
       scoreSubmitFailed: "Could not submit score. The leaderboard table may not be set up yet.",
+      deathScorePrompt: "You have died. Click here to see your scores",
       leaderboardLoading: "Loading leaderboard...",
       leaderboardEmpty: "No scores yet.",
       leaderboardFailed: "Could not load leaderboard.",
@@ -97,6 +98,7 @@
       playerNamePrompt: "Nombre para la clasificación:",
       scoreSubmitted: "Puntaje enviado.",
       scoreSubmitFailed: "No se pudo enviar el puntaje. Tal vez falte crear la tabla de clasificación.",
+      deathScorePrompt: "Has muerto. Haz clic aqui para ver tus puntajes",
       leaderboardLoading: "Cargando clasificación...",
       leaderboardEmpty: "Todavía no hay puntajes.",
       leaderboardFailed: "No se pudo cargar la clasificación.",
@@ -2209,6 +2211,11 @@
       state.player.flags.deathRecorded = true;
       saveStats();
     }
+    state.showGameOverImage = false;
+    setChoices([choice(ui.deathScorePrompt, showGameOverScores)]);
+  }
+
+  function showGameOverScores() {
     const reason = state.player ? state.player.gameOverReason : "default";
     const achievementsUnlocked = Object.keys(state.stats._achievements).filter((key) => state.stats._achievements[key]).length;
     const scoreDetails = state.player ? scoreBreakdown(achievementsUnlocked) : { total: 0, lines: [] };
