@@ -956,6 +956,7 @@
         hasPartialMap: false,
         bridgeRoute: randomBridgeRoute(),
         bridgeNavigationStep: 0,
+        districtsRested: false,
         bridgeXpAwarded: false,
         bridgeRested: false,
         hasDwarvenAle: false,
@@ -1510,7 +1511,7 @@
 
   function districts(clear = false) {
     writeKey("story.districts", {}, clear);
-    setChoices([
+    const choices = [
       choice(t("choice.barracks"), () => {
         awardDecisionXp("district_choice");
         barracks();
@@ -1518,14 +1519,20 @@
       choice(t("choice.merchant_district"), () => {
         awardDecisionXp("district_choice");
         merchant();
-      }),
-      choice(t("choice.rest"), () => {
-        state.player.health = state.player.maxHealth;
-        writeKey("story.districts_rest");
-        districts();
-      }),
-      choice(t("choice.save"), saveGame)
-    ]);
+      })
+    ];
+    if (!state.player.flags.districtsRested) {
+      choices.push(choice(t("choice.rest"), restAtDistricts));
+    }
+    choices.push(choice(t("choice.save"), saveGame));
+    setChoices(choices);
+  }
+
+  function restAtDistricts() {
+    state.player.flags.districtsRested = true;
+    state.player.health = state.player.maxHealth;
+    writeKey("story.districts_rest");
+    districts();
   }
 
   function barracks() {
@@ -3148,6 +3155,9 @@
     }
     if (state.player.flags.bridgeXpAwarded === undefined) {
       state.player.flags.bridgeXpAwarded = false;
+    }
+    if (state.player.flags.districtsRested === undefined) {
+      state.player.flags.districtsRested = false;
     }
     if (!Array.isArray(state.player.flags.bridgeRoute) || state.player.flags.bridgeRoute.length !== BRIDGE_DIRECTIONS.length) {
       state.player.flags.bridgeRoute = randomBridgeRoute();
