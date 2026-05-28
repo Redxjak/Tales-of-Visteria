@@ -2400,7 +2400,7 @@
   }
 
   function awardDecisionXp(reason) {
-    if (state.player) {
+    if (state.player && !isPlayerDead()) {
       ensureScoreState();
       state.player.score.decisions += 1;
     }
@@ -2408,7 +2408,7 @@
   }
 
   function awardXp(amount, reason, continuation = null) {
-    if (!state.player || state.player.class === "dm" || amount <= 0) {
+    if (!state.player || state.player.class === "dm" || amount <= 0 || isPlayerDead()) {
       return false;
     }
     state.player.experience += amount;
@@ -2431,26 +2431,43 @@
   }
 
   function showLevelUpChoices() {
+    if (isPlayerDead()) {
+      clearLevelRewardState();
+      gameOver();
+      return;
+    }
     state.awaitingLevelReward = true;
     state.levelRewardChoices = [
       choice(t("choice.level_hp"), () => {
+        if (cancelLevelRewardIfDead()) {
+          return;
+        }
         state.player.maxHealth += 5;
         state.player.health += 5;
         writeKey("story.level_hp");
         continueAfterLevel();
       }),
       choice(t("choice.level_ac"), () => {
+        if (cancelLevelRewardIfDead()) {
+          return;
+        }
         state.player.upgrades.ac += 1;
         checkStatAchievements();
         writeKey("story.level_ac");
         continueAfterLevel();
       }),
       choice(t("choice.level_damage"), () => {
+        if (cancelLevelRewardIfDead()) {
+          return;
+        }
         state.player.upgrades.damage += 1;
         writeKey("story.level_damage");
         continueAfterLevel();
       }),
       choice(t("choice.level_heal"), () => {
+        if (cancelLevelRewardIfDead()) {
+          return;
+        }
         state.player.health = state.player.maxHealth;
         writeKey("story.level_heal");
         continueAfterLevel();
@@ -2460,6 +2477,11 @@
   }
 
   function continueAfterLevel() {
+    if (isPlayerDead()) {
+      clearLevelRewardState();
+      gameOver();
+      return;
+    }
     const continuation = state.pendingLevelContinuation;
     const pendingChoices = state.pendingChoices;
     state.awaitingLevelReward = false;
@@ -2476,6 +2498,26 @@
     } else {
       render();
     }
+  }
+
+  function cancelLevelRewardIfDead() {
+    if (!isPlayerDead()) {
+      return false;
+    }
+    clearLevelRewardState();
+    gameOver();
+    return true;
+  }
+
+  function clearLevelRewardState() {
+    state.awaitingLevelReward = false;
+    state.levelRewardChoices = [];
+    state.pendingLevelContinuation = null;
+    state.pendingChoices = null;
+  }
+
+  function isPlayerDead() {
+    return Boolean(state.player && (state.player.health <= 0 || (state.player.flags && state.player.flags.deathRecorded)));
   }
 
   function rollD20(skill) {
@@ -2543,6 +2585,7 @@
   }
 
   function gameOver() {
+    clearLevelRewardState();
     if (state.player && !state.player.flags.deathRecorded) {
       state.stats[state.player.class].died += 1;
       state.player.flags.deathRecorded = true;
