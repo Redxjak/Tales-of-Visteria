@@ -23,7 +23,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.8.0 expands the bridge into a major ritual sequence, adds the silver mask turning point, new achievements, embedded level-up choices, and score breakdowns on game over.
+Version 0.8.0 expands the bridge into a major ritual sequence, adds new achievements, embedded level-up choices, and score breakdowns on game over.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
@@ -43,7 +43,13 @@ The playable opening includes:
 - Character-specific outcomes in the pale girl scene
 - Doll choice after the pale girl disappears
 - City or barracks route, feeding into the residential area
-- Bridge, warehouse ritual, and production area finale
+- Lava bridge approach and patrol encounter
+- Warehouse ritual battle against orcs, cultists, and a dangerous ritual leader
+- A hidden bridge turning point with branching consequences
+- Ritual surge branch with leave, stop, or jump-into-the-hole outcomes
+- False Hydra interruption and the arrival of the Order
+- Bridge-end checkpoint with rest, score submission, save, and leaderboard options
+- Orc camps preview endpoint for the next story update
 - Browser version with user accounts and leaderboards
 - English story/UI text loaded from `docs/assets/data/en.json`, ready for additional language files
 - Monster references included in the browser game data
