@@ -951,6 +951,7 @@
         hasDoll: false,
         hasThroneMap: false,
         hasPartialMap: false,
+        bridgeXpAwarded: false,
         bridgeRested: false,
         hasDwarvenAle: false,
         hasMagistoneOrb: false,
@@ -1869,7 +1870,10 @@
   }
 
   function goBridge() {
-    awardDecisionXp("bridge");
+    if (!state.player.flags.bridgeXpAwarded) {
+      state.player.flags.bridgeXpAwarded = true;
+      awardDecisionXp("bridge");
+    }
     continueChapter("bridge");
   }
 
@@ -1906,11 +1910,36 @@
 
   function warehouseRitual() {
     writeKey("story.warehouse_enter");
+    startWarehouseGuardCombat();
+  }
+
+  function startWarehouseGuardCombat() {
     startCombat(["orc", "orc", "orc", "orc", "orc", "cultist", "cultist", "cultist", "cultist"], "story.warehouse_cultists_defeated", {
       attackersPerRound: 3,
       deathReason: "warehouse",
-      onWin: ritualLeaderRage
+      onWin: ritualLeaderRage,
+      onRun: warehouseRunCaught
     });
+  }
+
+  function warehouseRunCaught() {
+    writeKey("story.warehouse_run_caught");
+    setChoices([
+      choice(t("choice.fight_back"), warehouseFightBack),
+      choice(t("choice.watch_ritual"), warehouseWatchRitual)
+    ]);
+  }
+
+  function warehouseFightBack() {
+    writeKey("story.warehouse_fight_back");
+    startWarehouseGuardCombat();
+  }
+
+  function warehouseWatchRitual() {
+    state.player.gameOverReason = "warehouse";
+    state.player.health = 0;
+    writeKey("story.warehouse_watch_ritual");
+    gameOver();
   }
 
   function ritualLeaderRage() {
@@ -2960,6 +2989,9 @@
     }
     if (state.player.flags.bridgeEndRested === undefined) {
       state.player.flags.bridgeEndRested = false;
+    }
+    if (state.player.flags.bridgeXpAwarded === undefined) {
+      state.player.flags.bridgeXpAwarded = false;
     }
     if (!state.player.upgrades) {
       state.player.upgrades = { ac: 0, damage: 0 };
