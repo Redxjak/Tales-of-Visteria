@@ -419,6 +419,7 @@ select {
   color: var(--muted);
   font-size: 18px;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 .modal-choices {

@@ -30,7 +30,7 @@
       experience: "Experience",
       hp: "HP",
       ac: "AC",
-      attackBonus: "Attack Bonus",
+      attackBonus: "Attack Chance Bonus",
       damage: "Damage",
       equipment: "Equipment",
       enemyHp: "Enemy HP",
@@ -44,6 +44,7 @@
       leaderboardEmpty: "No scores yet.",
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
+      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       loginScreen: "Sign in, create an account, or play as a guest",
       displayNamePrompt: "Choose a public username:",
@@ -89,7 +90,7 @@
       experience: "Experiencia",
       hp: "PV",
       ac: "CA",
-      attackBonus: "Bonif. ataque",
+      attackBonus: "Bonif. prob. ataque",
       damage: "Daño",
       equipment: "Equipo",
       enemyHp: "PV enemigos",
@@ -103,6 +104,7 @@
       leaderboardEmpty: "Todavía no hay puntajes.",
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
+      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       loginScreen: "Inicia sesion, crea una cuenta o juega como invitado",
       displayNamePrompt: "Elige un nombre publico:",
@@ -134,6 +136,12 @@
     }
   };
   const ui = uiTextByLanguage[lang] || uiTextByLanguage.en;
+  const fallbackText = {
+    "choice.sneak_bridge": "Sneak Across the Bridge",
+    "choice3.sneak_bridge": "Sneak Across the Bridge",
+    "story.level_up_title": "Level up!",
+    "story.level_up_body": "+2 Health\nChoose your level up reward."
+  };
 
   const classes = {
     warrior: {
@@ -255,8 +263,8 @@
     gremlin: { name: "Gremlin", ac: 13, hp: 10, attackBonus: 4, damageDie: 6, damageBonus: 1, xp: 20 },
     ghoul: { name: "Ghoul", ac: 12, hp: 18, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
     mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 },
-    cultist: { name: "Bronze-Masked Cultist", ac: 13, hp: 12, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
-    ritualLeader: { name: "Silver-Masked Leader", ac: 15, hp: 42, attackBonus: 7, damageDie: 10, damageBonus: 4, xp: 90 }
+    cultist: { name: "Masked Cultist", ac: 13, hp: 12, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
+    ritualLeader: { name: "Cultist Leader", ac: 15, hp: 42, attackBonus: 7, damageDie: 10, damageBonus: 4, xp: 90 }
   };
 
   const achievementsByLanguage = {
@@ -465,7 +473,7 @@
   }
 
   function t(key, vars = {}) {
-    let value = state.text[key] || key;
+    let value = state.text[key] || fallbackText[key] || key;
     return format(value, vars);
   }
 
@@ -693,7 +701,7 @@
       },
       {
         question: "How are leaderboard scores calculated?",
-        answer: "Your score adds level x 100, experience, fights won x 75, decisions x 15, achievements x 50, gold x 5, supplies x 10, and gear x 10. Reaching an ending adds 1000. Key items can add bonuses too: the doll, magistone orb, and maps. Dying subtracts 200."
+        answer: "Your score adds level x 100, experience, fights won x 75, decisions x 15, and achievements x 50. Reaching an ending adds 1000. Key items can add bonuses too: the doll, magistone orb, and maps. Dying subtracts 200."
       },
       {
         question: "When can I submit a score?",
@@ -1484,7 +1492,11 @@
 
   function manorLoot() {
     writeKey("story.manor_loot");
-    setChoices([
+    setChoices(manorLootChoices(!state.player.flags.manorRested));
+  }
+
+  function manorLootChoices(includeRest) {
+    const choices = [
       choice(t("choice.use_keys_chest"), manorChestKeys),
       choice(t("choice.leave_found"), goBridge),
       choice(t("choice.store_keys_chest"), () => {
@@ -1493,7 +1505,18 @@
         writeKey("story.manor_store_chest");
         setChoices([choice(t("choice.leave_house"), goBridge)]);
       })
-    ]);
+    ];
+    if (includeRest) {
+      choices.push(choice(t("choice.rest"), manorRest));
+    }
+    return choices;
+  }
+
+  function manorRest() {
+    state.player.flags.manorRested = true;
+    state.player.health = state.player.maxHealth;
+    writeKey("story.manor_rest");
+    setChoices(manorLootChoices(false));
   }
 
   function manorChestKeys() {
@@ -1947,13 +1970,21 @@
       if (natural === 1) {
         writeKey("story.combat_miss");
       } else if (natural === 20 || total >= currentTarget.ac) {
-        let damage = rollDie(damageDie) + stats.damageBonus;
+        const damageRoll = rollDie(damageDie);
+        const critDamageRoll = natural === 20 ? rollDie(damageDie) : 0;
+        let damage = damageRoll + stats.damageBonus;
         if (natural === 20) {
-          damage += rollDie(damageDie);
+          damage += critDamageRoll;
         }
+        const damageDealt = Math.min(currentTarget.hp, damage);
         currentTarget.hp -= damage;
-        writeKey("story.combat_hit", { enemy: currentTarget.name, damage });
-        if (damage > 20) {
+        writeKey("story.combat_hit", {
+          enemy: currentTarget.name,
+          damage,
+          damage_dealt: damageDealt,
+          damage_roll: damageRollText(damageDie, damageRoll, stats.damageBonus, critDamageRoll)
+        });
+        if (damageDealt > 20) {
           unlock("big_damage");
         }
         if (currentTarget.hp <= 0) {
@@ -2018,12 +2049,21 @@
       if (natural === 1) {
         writeKey("story.enemy_miss", { enemy: enemy.name, natural, total, ac: playerAc });
       } else if (natural === 20 || total >= playerAc) {
-        let damage = rollDie(enemy.damageDie) + enemy.damageBonus;
+        const damageRoll = rollDie(enemy.damageDie);
+        const critDamageRoll = natural === 20 ? rollDie(enemy.damageDie) : 0;
+        let damage = damageRoll + enemy.damageBonus;
         if (natural === 20) {
-          damage += rollDie(enemy.damageDie);
+          damage += critDamageRoll;
         }
         state.player.health -= damage;
-        writeKey("story.enemy_hit", { enemy: enemy.name, natural, total, ac: playerAc, damage });
+        writeKey("story.enemy_hit", {
+          enemy: enemy.name,
+          natural,
+          total,
+          ac: playerAc,
+          damage,
+          damage_roll: damageRollText(enemy.damageDie, damageRoll, enemy.damageBonus, critDamageRoll)
+        });
       } else {
         writeKey("story.enemy_miss", { enemy: enemy.name, natural, total, ac: playerAc });
       }
@@ -2169,6 +2209,13 @@
     return Math.floor(Math.random() * sides) + 1;
   }
 
+  function damageRollText(damageDie, damageRoll, damageBonus, critDamageRoll) {
+    if (critDamageRoll) {
+      return `d${damageDie} roll ${damageRoll} + crit d${damageDie} roll ${critDamageRoll} + ${damageBonus}`;
+    }
+    return `d${damageDie} roll ${damageRoll} + ${damageBonus}`;
+  }
+
   function addItem(item) {
     if (!state.player.gear.includes(item)) {
       state.player.gear.push(item);
@@ -2242,10 +2289,10 @@
       }
       const scores = await response.json();
       if (!scores.length) {
-        write(`${ui.leaderboardHeader}\n\n${ui.leaderboardEmpty}`, true);
+        write(`${ui.leaderboardHeader}\n\n${ui.leaderboardWarning}\n\n${ui.leaderboardEmpty}`, true);
         return;
       }
-      const lines = [ui.leaderboardHeader, ""];
+      const lines = [ui.leaderboardHeader, "", ui.leaderboardWarning, ""];
       scores.forEach((score, index) => {
         lines.push(format(ui.leaderboardLine, {
           rank: index + 1,
@@ -2256,7 +2303,7 @@
       });
       write(lines.join("\n"), true);
     } catch {
-      write(`${ui.leaderboardHeader}\n\n${ui.leaderboardFailed}`, true);
+      write(`${ui.leaderboardHeader}\n\n${ui.leaderboardWarning}\n\n${ui.leaderboardFailed}`, true);
     }
   }
 
@@ -2353,9 +2400,6 @@
     addLine("score.fights_won", player.score.fightsWon * 75, { count: player.score.fightsWon });
     addLine("score.decisions", player.score.decisions * 15, { count: player.score.decisions });
     addLine("score.achievements", achievementsUnlocked * 50, { count: achievementsUnlocked });
-    addLine("score.gold", player.gold * 5, { count: player.gold });
-    addLine("score.supplies", player.supplies * 10, { count: player.supplies });
-    addLine("score.gear", player.gear.length * 10, { count: player.gear.length });
     if (player.flags.completedRecorded) {
       addLine("score.current_ending", 1000);
     }
@@ -2757,8 +2801,9 @@
       ui.enemyHp,
       "------------------------------"
     ];
+    const nameWidth = Math.max(...state.combat.enemies.map((enemy) => enemy.name.length)) + 2;
     state.combat.enemies.forEach((enemy) => {
-      lines.push(`${enemy.name.padEnd(16)}${Math.max(0, enemy.hp)}/${enemy.maxHp}`);
+      lines.push(`${enemy.name.padEnd(nameWidth)}${Math.max(0, enemy.hp)}/${enemy.maxHp}`);
     });
     return lines.join("\n");
   }
