@@ -105,27 +105,128 @@ Source: `C:\Users\derri\Downloads\Tales of Visteria.vsdx`
   - Better valuables.
   - "Shiny stuff" clue from ghost girl.
 
-## Current Endpoint In Diagram
+## Current Browser Game Status
 
-- The diagram currently ends after the city/barracks branch with a note that this is the end so far.
-- The current browser version continues past this into:
-  - Residential area.
-  - Bridge.
-  - Warehouse ritual.
-  - Production area path puzzle.
+Version 0.8.0 is now a browser game under `docs/`.
 
-## Implementation Notes
+- Entry points:
+  - `/en`
+  - `/es`
+  - Root redirect page.
+- Account modes:
+  - Login.
+  - Google login.
+  - Create account.
+  - Guest play.
+- Current systems:
+  - Save/load.
+  - Local guest storage.
+  - Cloud-backed user data through Supabase.
+  - Leaderboard submission and leaderboard display.
+  - Achievements.
+  - XP, level-ups, and combat upgrades.
+  - Score breakdowns on game over and chapter endpoints.
+  - English and Spanish data files.
 
-- Current browser game already supports:
-  - Start screen.
-  - New/load game.
-  - Cletus, Cal, Ren, Kili, and Jon.
-  - A special Jon the DM route.
+## Current Story Flow
+
+- Start screen.
+- Character selection:
+  - Cletus the Warrior.
+  - Ren the Ranger.
+  - Cal the Scholar.
+  - Kili the Dwarf.
+  - Jon the DM.
+- Jon route:
+  - DM chooses orcs/goblins or hydra.
+  - DM route can watch the ghost girl scene.
+  - DM route can steer barracks or merchant district.
+  - DM route can steer residential choices.
+  - DM route currently ends at the bridge summary and chapter-complete state.
+- Player route:
   - Caravan attack.
-  - Forest loop.
-  - Cave route.
+  - Fight or run.
+  - Escape choice between forest and cave.
+  - Forest loops until the player gives up or breaks.
+  - Cave leads into the buried city.
   - Ghost girl encounter.
-  - City or barracks route feeding into residential, then bridge.
-- Good next code changes:
-  - Expand Jon's DM route past the current outline endpoint.
-  - Add different city/barracks descriptions depending on whether the ghost girl helped.
+  - Character-specific fight outcomes.
+  - Persuasion outcomes and doll drop.
+  - Doll choice.
+  - District choice between barracks and merchant district.
+  - Optional rest at the district sign.
+  - Barracks route.
+  - Merchant route.
+  - Residential area.
+  - Optional rest before bridge.
+
+## Residential Status
+
+- Large Manor:
+  - Sneak check.
+  - Fight, sneak, or grouped takedown options.
+  - Loot path with unmarked keys and trapped black chest.
+  - Correct key grants the magistone orb.
+- Small Shack:
+  - Gremlin and ghoul encounter.
+  - Return to street or proceed to bridge.
+- Large House / Mimic House:
+  - Burn house safely exits toward bridge.
+  - Leave immediately exits toward bridge.
+  - Rest causes mimic-house death and unlocks the mimic nap achievement.
+  - Loot path:
+    - First chest reveals a mimic.
+    - The player snaps out of the welcoming feeling.
+    - First mimic combat starts automatically.
+    - If the first mimic is defeated, two more mimics appear.
+    - Fight leads to two-mimic combat.
+    - Victory grants the torn bridge map and magistone orb.
+    - Flee reveals the house is a mimic and opens black hole, fire, wall attack, and possible dwarven ale outcomes.
+
+## Bridge And Warehouse Status
+
+- Bridge approach:
+  - Full throne map reveals the complete safe route.
+  - Torn map reveals LEFT, then UP.
+  - No map warns the player.
+  - Sneak across the lava bridge.
+  - Failed sneak triggers bridge patrol combat.
+- Warehouse ritual:
+  - The player finds a ritual inside the bridge structure.
+  - Fight five orcs and four cultists.
+  - Fight the silver-masked ritual leader.
+  - Silver mask choice:
+    - Leave it.
+    - Store it.
+    - Wear it for power and corruption.
+  - Ritual surge choice:
+    - Leave the warehouse.
+    - Stop the ritual.
+    - Jump into the hole.
+- False Hydra / Order branch:
+  - Leaving the warehouse triggers the False Hydra reveal.
+  - The Order arrives and freezes the scene.
+  - Player can ask who they are, what the monster is, and why they are here.
+  - The Order removes the threat and the warehouse vanishes.
+- Bridge-end checkpoint:
+  - Unlocks the warehouse-survived achievement.
+  - Records the endpoint.
+  - Allows rest.
+  - Allows putting the silver mask back on if stored.
+  - Allows score submission, leaderboard, save, and main menu.
+  - Moves into the orc camps preview.
+
+## Current Endpoint
+
+- The active story endpoint is the orc camps preview.
+- The old production-area path puzzle text still exists in the data file, but it is not the active endpoint in the current browser flow.
+
+## Planned Story
+
+- Orc camp.
+- Castle.
+- Throne room.
+- Final boss fight.
+- Treasure room.
+- Consequences for silver mask possession, use, and corruption.
+- More Jon the DM route coverage beyond the bridge summary.
