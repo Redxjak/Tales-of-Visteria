@@ -2349,6 +2349,7 @@
       }
     }
     state.combat.guarding = false;
+    finishCombatDeath();
   }
 
   function finishCombatDeath() {
