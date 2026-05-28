@@ -4,6 +4,10 @@ A browser-based dark fantasy adventure.
 
 Current version: **0.8.0**
 
+## Community
+
+Join the Discord server for project updates and feedback: [Redxjak Discord](https://discord.gg/9C4npSfNQd)
+
 ## Content warning
 
 This game may contain vulgar language and dark fantasy themes.
