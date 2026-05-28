@@ -987,6 +987,8 @@
       dmIntro,
       dmGhost,
       dmDistricts,
+      dmBridgeEnd,
+      dmOrcCamps: dmOrcCampsPreview,
       caravan,
       escape,
       cave,
@@ -1172,7 +1174,168 @@
 
   function dmBridge() {
     writeKey("story.dm_bridge");
-    setChoices([choice(t("choice.chapter_complete"), () => continueChapter("complete"))]);
+    setChoices([
+      choice(t("choice.dm_watch_sneak"), dmBridgeSneak),
+      choice(t("choice.dm_skip_warehouse"), dmWarehouse)
+    ]);
+  }
+
+  function dmBridgeSneak() {
+    writeKey("story.dm_bridge_sneak_start");
+    const roll = rollD20("sneak");
+    const spotted = roll <= 10;
+    writeKey("story.dm_bridge_sneak_result", {
+      roll,
+      result: t(spotted ? "story.dm_bridge_sneak_low" : "story.dm_bridge_sneak_high")
+    });
+    setChoices([
+      spotted
+        ? choice(t("choice.dm_bridge_patrol"), dmBridgePatrol)
+        : choice(t("choice.dm_follow_warehouse"), dmWarehouse)
+    ]);
+  }
+
+  function dmBridgePatrol() {
+    writeKey("story.dm_bridge_patrol");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmWarehouse),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("combat"))
+    ]);
+  }
+
+  function dmWarehouse() {
+    writeKey("story.dm_warehouse");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmWarehouseLeaderRage),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("warehouse"))
+    ]);
+  }
+
+  function dmWarehouseLeaderRage() {
+    writeKey("story.dm_warehouse_leader_rage");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmSilverMaskChoice),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("warehouse"))
+    ]);
+  }
+
+  function dmSilverMaskChoice() {
+    writeKey("story.dm_silver_mask_choice");
+    setChoices([
+      choice(t("choice.dm_leave_mask"), () => {
+        state.player.flags.hasSilverMask = false;
+        state.player.flags.wearingSilverMask = false;
+        writeKey("story.dm_silver_mask_left");
+        dmRitualSurge();
+      }),
+      choice(t("choice.dm_store_mask"), () => {
+        state.player.flags.hasSilverMask = true;
+        state.player.flags.wearingSilverMask = false;
+        addItem("silver mask");
+        writeKey("story.dm_silver_mask_stored");
+        dmRitualSurge();
+      }),
+      choice(t("choice.dm_wear_mask"), () => {
+        state.player.flags.hasSilverMask = true;
+        state.player.flags.wearingSilverMask = true;
+        applySilverMaskPower();
+        addItem("silver mask");
+        writeKey("story.dm_silver_mask_worn");
+        dmRitualSurge();
+      })
+    ]);
+  }
+
+  function dmRitualSurge() {
+    writeKey("story.dm_ritual_surge");
+    setChoices([
+      choice(t("choice.dm_leave_warehouse"), dmWarehouseLeave),
+      choice(t("choice.dm_stop_ritual"), dmWarehouseStopRitual),
+      choice(t("choice.dm_jump_hole"), dmWarehouseJumpHole)
+    ]);
+  }
+
+  function dmWarehouseLeave() {
+    writeKey("story.dm_warehouse_leave");
+    setChoices([choice(t("choice.dm_order_arrive"), dmFalseHydraInterruption)]);
+  }
+
+  function dmFalseHydraInterruption() {
+    writeKey("story.dm_false_hydra_interruption");
+    setChoices([choice(t("choice.dm_listen_order"), dmOrderDialogue)]);
+  }
+
+  function dmOrderDialogue() {
+    writeKey("story.dm_order_dialogue");
+    dmBridgeEnd();
+  }
+
+  function dmWarehouseStopRitual() {
+    writeKey("story.dm_warehouse_stop_ritual");
+    dmBridgeEnd();
+  }
+
+  function dmWarehouseJumpHole() {
+    writeKey("story.dm_warehouse_jump_hole");
+    setChoices([choice(t("choice.dm_game_over"), () => dmGameOver("ritual_hole"))]);
+  }
+
+  function dmBridgeEnd() {
+    state.player.chapter = "dmBridgeEnd";
+    writeKey("story.dm_bridge_end");
+    unlock("warehouse_survived");
+    recordEnding();
+    saveGame();
+    showDmBridgeEndChoices();
+  }
+
+  function showDmBridgeEndChoices() {
+    const choices = [
+      choice(t("choice.dm_rest_bridge"), dmBridgeEndRest)
+    ];
+    if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
+      choices.push(choice(t("choice.dm_put_mask_on"), dmSilverMaskReworn));
+    }
+    choices.push(
+      choice(t("choice.dm_move_orc_camps"), dmOrcCampsPreview),
+      choice(t("choice.current_status"), currentGameStatus)
+    );
+    setChoices(choices);
+  }
+
+  function dmSilverMaskReworn() {
+    state.player.flags.wearingSilverMask = true;
+    applySilverMaskPower();
+    writeKey("story.dm_silver_mask_reworn");
+    showDmBridgeEndChoices();
+  }
+
+  function dmBridgeEndRest() {
+    state.player.health = state.player.maxHealth;
+    writeKey("story.dm_bridge_end_rest");
+    showDmBridgeEndChoices();
+  }
+
+  function dmOrcCampsPreview() {
+    state.player.chapter = "dmOrcCamps";
+    writeKey("story.dm_orc_camps_preview");
+    recordEnding();
+    saveGame();
+    setChoices([
+      choice(t("choice.main_menu"), showStart),
+      choice(t("choice.current_status"), currentGameStatus)
+    ]);
+  }
+
+  function dmGameOver(reason) {
+    state.player.gameOverReason = reason;
+    state.player.health = 0;
+    gameOver();
+  }
+
+  function currentGameStatus() {
+    writeKey("story.current_status", { version: VERSION }, true);
+    setChoices([choice(t("choice.back_start"), showStart)]);
   }
 
   function caravan(clear = false) {
@@ -1911,6 +2074,7 @@
     }
     choices.push(
       choice(t("choice.move_orc_camps"), moveToOrcCamps),
+      choice(t("choice.current_status"), currentGameStatus),
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.main_menu"), showStart),
@@ -1946,6 +2110,7 @@
     setChoices([
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
+      choice(t("choice.current_status"), currentGameStatus),
       choice(t("choice.main_menu"), showStart),
       choice(t("choice.save"), saveGame)
     ]);
@@ -1958,6 +2123,7 @@
     setChoices([
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
+      choice(t("choice.current_status"), currentGameStatus),
       choice(t("choice.main_menu"), showStart)
     ]);
   }

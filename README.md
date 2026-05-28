@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.8.0**
+Current version: **0.8.1**
 
 ## Community
 
@@ -27,7 +27,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.8.0 expands the bridge into a major ritual sequence, adds new achievements, embedded level-up choices, and score breakdowns on game over.
+Version 0.8.1 expands the bridge into a major ritual sequence, extends Jon the DM through the orc camps preview, adds new achievements, embedded level-up choices, and score breakdowns on game over.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
