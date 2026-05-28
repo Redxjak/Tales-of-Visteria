@@ -2289,10 +2289,10 @@
       }
       const scores = await response.json();
       if (!scores.length) {
-        write(`${ui.leaderboardHeader}\n\n${ui.leaderboardWarning}\n\n${ui.leaderboardEmpty}`, true);
+        writeLeaderboard([ui.leaderboardEmpty]);
         return;
       }
-      const lines = [ui.leaderboardHeader, "", ui.leaderboardWarning, ""];
+      const lines = [];
       scores.forEach((score, index) => {
         lines.push(format(ui.leaderboardLine, {
           rank: index + 1,
@@ -2301,10 +2301,18 @@
           character: score.character_name
         }));
       });
-      write(lines.join("\n"), true);
+      writeLeaderboard(lines);
     } catch {
-      write(`${ui.leaderboardHeader}\n\n${ui.leaderboardWarning}\n\n${ui.leaderboardFailed}`, true);
+      writeLeaderboard([ui.leaderboardFailed]);
     }
+  }
+
+  function writeLeaderboard(lines) {
+    state.storyParts = [
+      `<div class="leaderboard-view"><h2>${escapeHtml(ui.leaderboardHeader)}</h2><p class="leaderboard-warning">${escapeHtml(ui.leaderboardWarning)}</p><pre>${escapeHtml(lines.join("\n"))}</pre></div>`
+    ];
+    state.showGameOverImage = false;
+    render();
   }
 
   async function submitScore() {
