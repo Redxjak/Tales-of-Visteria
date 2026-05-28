@@ -78,6 +78,21 @@ Source: `C:\Users\derri\Downloads\Tales of Visteria.vsdx`
   - The player feels a shiver.
   - A glance back shows the doll is gone.
 
+## Divine 12
+
+- Karna Masta: The God Emperor; legalism and nobility.
+- Lucius: God of magic, order, and contracts.
+- Bahamut: God of justice, valour, bravery, orderly warfare, and metallic dragons.
+- Tiamat: Goddess of evil, chaos, motherhood, and chromatic dragons; patron goddess of exiles, the rejected, and the misunderstood.
+- Maxwell: The Creator Goddess; creator of life; goddess of light, love, and marriage; older twin of Cardes; married to the Elven King of Sylvane out of pact with the Feywild.
+- Cardes: God of destruction, death, desolation, and ruin; younger twin of Maxwell.
+- Zevalhua: Goddess of ambition, deceit, treachery, plots, advancement, and innovation.
+- Afla Dilith: God of true war, blood, violence, slaughter, single combat, and pride.
+- Kulyuk: God of peace, pacifism, sacrifice, and courage; wed to Isha.
+- Isha: World Tree; goddess of natural life, nature, cycles, rebirth, renewal, and sage travels; patron of pilgrims and travelers; wed to Kulyuk.
+- Ananke: Goddess of fate, prophecy, futures, and divinations; the Lady of What Will Be, What Is, and What Has Been.
+- Vaeruun: God of weather, storms, calamity, disasters natural or otherwise, seafaring, and crop growth.
+
 ## City Or Barracks
 
 - The road ends at a sign:

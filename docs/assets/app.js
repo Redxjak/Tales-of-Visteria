@@ -252,7 +252,9 @@
     orc: { name: "Orc", ac: 13, hp: 15, attackBonus: 5, damageDie: 12, damageBonus: 3, xp: 35 },
     gremlin: { name: "Gremlin", ac: 13, hp: 10, attackBonus: 4, damageDie: 6, damageBonus: 1, xp: 20 },
     ghoul: { name: "Ghoul", ac: 12, hp: 18, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
-    mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 }
+    mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 },
+    cultist: { name: "Bronze-Masked Cultist", ac: 13, hp: 12, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
+    ritualLeader: { name: "Silver-Masked Leader", ac: 15, hp: 42, attackBonus: 7, damageDie: 10, damageBonus: 4, xp: 90 }
   };
 
   const achievementsByLanguage = {
@@ -838,6 +840,12 @@
         bridgeRested: false,
         hasDwarvenAle: false,
         hasMagistoneOrb: false,
+        hasSilverMask: false,
+        wearingSilverMask: false,
+        maskPowerClaimed: false,
+        bridgeEndMaskResolved: false,
+        maskCorruption: 0,
+        bridgeEndRested: false,
         completedRecorded: false,
         deathRecorded: false
       },
@@ -875,6 +883,8 @@
       districts,
       residential,
       bridge,
+      bridgeEnd,
+      orcCamps,
       complete
     };
     state.player.chapter = chapter;
@@ -1579,8 +1589,210 @@
     } else {
       text += t("story.bridge_no_map");
     }
-    text += t("story.bridge_temp_end");
     write(text, clear);
+    setChoices([
+      choice(t("choice.sneak_bridge"), bridgeSneak),
+      choice(t("choice.save"), saveGame)
+    ]);
+  }
+
+  function bridgeSneak() {
+    writeKey("story.bridge_sneak_start");
+    if (rollD20("sneak") >= 13) {
+      writeKey("story.bridge_sneak_success");
+      warehouseRitual();
+      return;
+    }
+    writeKey("story.bridge_sneak_fail");
+    startCombat(["orc", "goblin", "goblin"], "story.bridge_patrol_defeated", {
+      attackersPerRound: 2,
+      deathReason: "combat",
+      onWin: warehouseRitual
+    });
+  }
+
+  function warehouseRitual() {
+    writeKey("story.warehouse_enter");
+    startCombat(["orc", "orc", "orc", "orc", "orc", "cultist", "cultist", "cultist", "cultist"], "story.warehouse_cultists_defeated", {
+      attackersPerRound: 3,
+      deathReason: "warehouse",
+      onWin: ritualLeaderRage
+    });
+  }
+
+  function ritualLeaderRage() {
+    writeKey("story.warehouse_leader_rage");
+    startCombat(["ritualLeader"], "story.warehouse_leader_defeated", {
+      attackersPerRound: 1,
+      deathReason: "warehouse",
+      onWin: silverMaskChoice
+    });
+  }
+
+  function silverMaskChoice() {
+    writeKey("story.silver_mask_choice");
+    setChoices([
+      choice(t("choice.leave_mask"), confirmLeaveMask),
+      choice(t("choice.store_mask"), storeSilverMask),
+      choice(t("choice.wear_mask"), wearSilverMask)
+    ]);
+  }
+
+  function confirmLeaveMask() {
+    writeKey("story.silver_mask_leave_confirm");
+    setChoices([
+      choice(t("choice.leave_mask_confirm"), leaveSilverMask),
+      choice(t("choice.store_mask"), storeSilverMask),
+      choice(t("choice.wear_mask"), wearSilverMask)
+    ]);
+  }
+
+  function leaveSilverMask() {
+    state.player.flags.hasSilverMask = false;
+    state.player.flags.wearingSilverMask = false;
+    writeKey("story.silver_mask_left");
+    warehouseAfterMask();
+  }
+
+  function storeSilverMask() {
+    state.player.flags.hasSilverMask = true;
+    state.player.flags.wearingSilverMask = false;
+    addItem("silver mask");
+    writeKey("story.silver_mask_stored");
+    warehouseAfterMask();
+  }
+
+  function wearSilverMask() {
+    state.player.flags.hasSilverMask = true;
+    state.player.flags.wearingSilverMask = true;
+    applySilverMaskPower();
+    addItem("silver mask");
+    writeKey("story.silver_mask_worn");
+    warehouseAfterMask();
+  }
+
+  function applySilverMaskPower() {
+    state.player.flags.maskCorruption = Math.max(state.player.flags.maskCorruption || 0, 1);
+    if (!state.player.flags.maskPowerClaimed) {
+      state.player.maxHealth += 6;
+      state.player.health += 6;
+      state.player.upgrades.damage += 3;
+      state.player.flags.maskPowerClaimed = true;
+    }
+  }
+
+  function warehouseAfterMask() {
+    writeKey("story.warehouse_ritual_surges");
+    setChoices([
+      choice(t("choice.leave_warehouse"), warehouseLeave),
+      choice(t("choice.stop_ritual"), warehouseStopRitual),
+      choice(t("choice.jump_hole"), warehouseJumpHole)
+    ]);
+  }
+
+  function warehouseLeave() {
+    writeKey("story.warehouse_leave");
+    setChoices([
+      choice(t("choice.stand_ground"), falseHydraInterruption),
+      choice(t("choice.run_for_life"), falseHydraInterruption)
+    ]);
+  }
+
+  function falseHydraInterruption() {
+    writeKey("story.false_hydra_interruption");
+    if (state.player.flags.wearingSilverMask) {
+      writeKey("story.order_mask_warning");
+    }
+    writeKey("story.order_arrival");
+    setChoices([
+      choice(t("choice.ask_who_order"), () => orderDialogue("who")),
+      choice(t("choice.ask_monster"), () => orderDialogue("monster")),
+      choice(t("choice.ask_why_here"), () => orderDialogue("why"))
+    ]);
+  }
+
+  function orderDialogue(topic) {
+    writeKey(`story.order_dialogue_${topic}`);
+    writeKey("story.order_departure");
+    if (state.player.flags.wearingSilverMask) {
+      writeKey("story.order_mask_missed_one");
+    }
+    bridgeEnd();
+  }
+
+  function warehouseStopRitual() {
+    writeKey("story.warehouse_stop_ritual");
+    bridgeEnd();
+  }
+
+  function warehouseJumpHole() {
+    writeKey("story.warehouse_jump_hole");
+    state.player.gameOverReason = "ritual_hole";
+    state.player.health = 0;
+    gameOver();
+  }
+
+  function bridgeEnd(clear = false) {
+    state.player.chapter = "bridgeEnd";
+    writeKey("story.bridge_temp_end", {}, clear);
+    resolveBridgeEndMask();
+    recordEnding();
+    saveGame();
+    showBridgeEndChoices();
+  }
+
+  function resolveBridgeEndMask() {
+    if (state.player.flags.bridgeEndMaskResolved) {
+      return;
+    }
+    if (state.player.flags.wearingSilverMask) {
+      writeKey("story.silver_mask_reworn");
+      state.player.flags.bridgeEndMaskResolved = true;
+    } else if (!state.player.flags.hasSilverMask) {
+      state.player.flags.bridgeEndMaskResolved = true;
+    }
+  }
+
+  function showBridgeEndChoices() {
+    const choices = [];
+    if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
+      choices.push(choice(t("choice.put_mask_on"), putSilverMaskBackOn));
+    }
+    if (!state.player.flags.bridgeEndRested) {
+      choices.push(choice(t("choice.rest"), restAfterBridge));
+    }
+    choices.push(
+      choice(t("choice.move_orc_camps"), moveToOrcCamps),
+      choice(ui.submitScore, submitScore),
+      choice(ui.leaderboard, showLeaderboard),
+      choice(t("choice.main_menu"), showStart),
+      choice(t("choice.save"), saveGame)
+    );
+    setChoices(choices);
+  }
+
+  function restAfterBridge() {
+    state.player.flags.bridgeEndRested = true;
+    state.player.health = state.player.maxHealth;
+    writeKey("story.bridge_end_rest");
+    showBridgeEndChoices();
+  }
+
+  function putSilverMaskBackOn() {
+    state.player.flags.wearingSilverMask = true;
+    state.player.flags.bridgeEndMaskResolved = true;
+    applySilverMaskPower();
+    writeKey("story.silver_mask_put_on_after_order");
+    showBridgeEndChoices();
+  }
+
+  function moveToOrcCamps() {
+    continueChapter("orcCamps", true);
+  }
+
+  function orcCamps(clear = false) {
+    state.player.chapter = "orcCamps";
+    writeKey("story.orc_camps_preview", {}, clear);
     recordEnding();
     saveGame();
     setChoices([
@@ -1603,9 +1815,13 @@
   }
 
   function startCombat(enemyTypes, victoryKey, options = {}) {
+    const typeCounts = {};
     const enemies = enemyTypes.map((type, index) => {
       const base = monsterStats[type];
-      return { ...base, type, id: index + 1, name: `${base.name} ${index + 1}`, hp: base.hp, maxHp: base.hp };
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+      const typeTotal = enemyTypes.filter((enemyType) => enemyType === type).length;
+      const name = typeTotal > 1 ? `${base.name} ${typeCounts[type]}` : base.name;
+      return { ...base, type, id: index + 1, name, hp: base.hp, maxHp: base.hp };
     });
     state.combat = {
       enemies,
@@ -2046,6 +2262,9 @@
     if (player.flags.hasMagistoneOrb) {
       score += 150;
     }
+    if (player.flags.hasSilverMask) {
+      score += player.flags.wearingSilverMask ? 250 : 125;
+    }
     if (player.flags.hasThroneMap) {
       score += 150;
     } else if (player.flags.hasPartialMap) {
@@ -2070,6 +2289,11 @@
     }
     if (flags.hasMagistoneOrb) {
       pieces.push("magistone orb");
+    }
+    if (flags.wearingSilverMask) {
+      pieces.push("wore silver mask");
+    } else if (flags.hasSilverMask) {
+      pieces.push("stored silver mask");
     }
     if (flags.girlHelped) {
       pieces.push("ghost ally");
@@ -2290,6 +2514,40 @@
     }
   }
 
+  function ensurePlayerState() {
+    ensureScoreState();
+    if (!state.player.flags) {
+      state.player.flags = {};
+    }
+    if (state.player.flags.hasSilverMask === undefined) {
+      state.player.flags.hasSilverMask = state.player.gear ? state.player.gear.includes("silver mask") : false;
+    }
+    if (state.player.flags.wearingSilverMask === undefined) {
+      state.player.flags.wearingSilverMask = false;
+    }
+    if (state.player.flags.maskPowerClaimed === undefined) {
+      state.player.flags.maskPowerClaimed = state.player.flags.wearingSilverMask;
+    }
+    if (state.player.flags.bridgeEndMaskResolved === undefined) {
+      state.player.flags.bridgeEndMaskResolved = false;
+    }
+    if (state.player.flags.maskCorruption === undefined) {
+      state.player.flags.maskCorruption = 0;
+    }
+    if (state.player.flags.bridgeEndRested === undefined) {
+      state.player.flags.bridgeEndRested = false;
+    }
+    if (!state.player.upgrades) {
+      state.player.upgrades = { ac: 0, damage: 0 };
+    }
+    if (state.player.upgrades.ac === undefined) {
+      state.player.upgrades.ac = 0;
+    }
+    if (state.player.upgrades.damage === undefined) {
+      state.player.upgrades.damage = 0;
+    }
+  }
+
   function saveGame() {
     if (state.player) {
       localStorage.setItem(`${storagePrefix}${lang}.save`, JSON.stringify(state.player));
@@ -2306,7 +2564,7 @@
     }
     try {
       state.player = JSON.parse(saved);
-      ensureScoreState();
+      ensurePlayerState();
       writeKey("ui.loaded_game", {}, true);
       continueChapter(state.player.chapter || "caravan");
     } catch {
