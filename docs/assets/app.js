@@ -567,6 +567,10 @@
       button.type = "button";
       button.textContent = choice.label;
       button.addEventListener("click", () => {
+        if (state.combat && state.player && state.player.health <= 0) {
+          finishCombatDeath();
+          return;
+        }
         if (!choice.preserveScene) {
           beginVisibleScene();
         }
@@ -2154,6 +2158,10 @@
     if (!state.combat) {
       return;
     }
+    if (state.player.health <= 0) {
+      finishCombatDeath();
+      return;
+    }
     const labels = [
       choice(t("choice.attack"), () => playerAttack(false)),
       choice(t("choice.heavy_attack"), () => playerAttack(true)),
@@ -2167,6 +2175,9 @@
   }
 
   function playerAttack(heavy) {
+    if (!state.combat || finishCombatDeath()) {
+      return;
+    }
     const stats = combatStats();
     const target = state.combat.enemies.find((enemy) => enemy.hp > 0);
     if (!target) {
@@ -2223,22 +2234,27 @@
       return;
     }
     enemyTurn();
-    if (state.player.health <= 0) {
-      state.player.gameOverReason = state.combat.deathReason;
-      gameOver();
-    } else {
+    if (!finishCombatDeath()) {
       showCombatChoices();
     }
   }
 
   function dodge() {
+    if (!state.combat || finishCombatDeath()) {
+      return;
+    }
     state.combat.guarding = true;
     writeKey("story.combat_dodge");
     enemyTurn();
-    showCombatChoices();
+    if (!finishCombatDeath()) {
+      showCombatChoices();
+    }
   }
 
   function runCombat() {
+    if (!state.combat || finishCombatDeath()) {
+      return;
+    }
     const roll = rollD20("sneak");
     if (roll >= 12) {
       writeKey("story.combat_run_success");
@@ -2252,22 +2268,30 @@
     } else {
       writeKey("story.combat_run_fail");
       enemyTurn();
-      showCombatChoices();
+      if (!finishCombatDeath()) {
+        showCombatChoices();
+      }
     }
   }
 
   function drinkPotion() {
+    if (!state.combat || finishCombatDeath()) {
+      return;
+    }
     removeItem("health potion");
     const healing = rollDie(4) + rollDie(4) + 6;
     state.player.health = Math.min(state.player.maxHealth, state.player.health + healing);
     writeKey("story.combat_potion", { healing });
     enemyTurn();
-    showCombatChoices();
+    if (!finishCombatDeath()) {
+      showCombatChoices();
+    }
   }
 
   function enemyTurn() {
     const playerAc = combatStats().ac + (state.combat.guarding ? 5 : 0);
-    state.combat.enemies.filter((enemy) => enemy.hp > 0).slice(0, state.combat.attackersPerRound).forEach((enemy) => {
+    const attackers = state.combat.enemies.filter((enemy) => enemy.hp > 0).slice(0, state.combat.attackersPerRound);
+    for (const enemy of attackers) {
       const natural = d20(false);
       const total = natural + enemy.attackBonus;
       if (natural === 1) {
@@ -2279,7 +2303,7 @@
         if (natural === 20) {
           damage += critDamageRoll;
         }
-        state.player.health -= damage;
+        state.player.health = Math.max(0, state.player.health - damage);
         writeKey("story.enemy_hit", {
           enemy: enemy.name,
           natural,
@@ -2291,8 +2315,21 @@
       } else {
         writeKey("story.enemy_miss", { enemy: enemy.name, natural, total, ac: playerAc });
       }
-    });
+      if (state.player.health <= 0) {
+        break;
+      }
+    }
     state.combat.guarding = false;
+  }
+
+  function finishCombatDeath() {
+    if (!state.combat || state.player.health > 0) {
+      return false;
+    }
+    state.player.gameOverReason = state.combat.deathReason;
+    state.combat = null;
+    gameOver();
+    return true;
   }
 
   function combatVictory() {
