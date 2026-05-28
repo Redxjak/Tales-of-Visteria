@@ -738,7 +738,7 @@
     const entries = lang === "es" ? [
       {
         question: "Que hacen las opciones de ataque?",
-        answer: "Attack usa tus ataques normales. Heavy Attack hace un solo ataque mas fuerte, pero con -2 al tiro para golpear. Dodge sube tu AC por ese turno. Run intenta escapar con una tirada de sneak. Health Potion aparece cuando llevas una pocion y cura 2d4 + 6 antes de que el enemigo responda."
+        answer: "Attack usa tus ataques normales. Heavy Attack hace un solo ataque mas fuerte, pero con -1 al tiro para golpear. Dodge sube tu AC por ese turno. Run intenta escapar con una tirada de sneak. Health Potion aparece cuando llevas una pocion y cura 2d4 + 6 antes de que el enemigo responda."
       },
       {
         question: "Como se calculan los puntajes?",
@@ -759,7 +759,7 @@
     ] : [
       {
         question: "What do the attack options do?",
-        answer: "Attack uses your normal number of attacks. Heavy Attack makes one stronger swing, but takes -2 on the hit roll. Dodge raises your AC for that enemy turn. Run tries to escape with a sneak roll. Health Potion appears when you have one and heals 2d4 + 6 before the enemy responds."
+        answer: "Attack uses your normal number of attacks. Heavy Attack makes one stronger swing, but takes -1 on the hit roll. Dodge raises your AC for that enemy turn. Run tries to escape with a sneak roll. Health Potion appears when you have one and heals 2d4 + 6 before the enemy responds."
       },
       {
         question: "How are leaderboard scores calculated?",
@@ -2215,7 +2215,7 @@
     }
     const attacks = heavy ? 1 : stats.attacks;
     const damageDie = heavy ? stats.damageDie + 4 : stats.damageDie;
-    const attackBonus = heavy ? stats.attackBonus - 2 : stats.attackBonus;
+    const attackBonus = heavy ? stats.attackBonus - 1 : stats.attackBonus;
     for (let i = 1; i <= attacks; i += 1) {
       const currentTarget = state.combat.enemies.find((enemy) => enemy.hp > 0);
       if (!currentTarget) {
