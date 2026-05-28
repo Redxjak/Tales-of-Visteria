@@ -12,8 +12,8 @@ This game may contain vulgar language and dark fantasy themes.
 
 Browser version:
 
-- English: [https://redxjak.github.io/Tales-of-Visteria/en](https://redxjak.github.io/Tales-of-Visteria/en)
-- Spanish: [https://redxjak.github.io/Tales-of-Visteria/es](https://redxjak.github.io/Tales-of-Visteria/es)
+- English: [https://redxjak.github.io/ToV/en](https://redxjak.github.io/ToV/en)
+- Spanish: [https://redxjak.github.io/ToV/es](https://redxjak.github.io/ToV/es)
 
 ## Text and translations
 
