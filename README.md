@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.8.1**
+Current version: **0.8.2**
 
 ## Community
 
