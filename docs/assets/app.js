@@ -5,6 +5,7 @@
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
+  const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -685,10 +686,10 @@
 
   async function init() {
     try {
-      const response = await fetch(`${ASSET_BASE}/data/${lang}.json`);
+      const response = await fetch(`${DATA_ASSET_BASE}/data/${lang}.json`);
       state.text = await response.json();
     } catch {
-      const fallback = await fetch(`${ASSET_BASE}/data/en.json`);
+      const fallback = await fetch(`${DATA_ASSET_BASE}/data/en.json`);
       state.text = await fallback.json();
     }
     await handleOAuthRedirect();
@@ -1032,7 +1033,7 @@
     if (infoMenu) {
       infoMenu.querySelectorAll("[data-mobile-panel]").forEach((button) => {
         button.onclick = () => {
-          toggleMobilePanel(button.dataset.mobilePanel);
+          activateInfoPanel(button.dataset.mobilePanel);
           infoMenu.open = false;
         };
       });
@@ -1043,6 +1044,18 @@
   function toggleMobilePanel(name) {
     state.activeMobilePanel = state.activeMobilePanel === name ? null : name;
     syncMobilePanels();
+  }
+
+  function activateInfoPanel(name) {
+    const isMobileLayout = window.matchMedia("(max-width: 980px)").matches;
+    if (isMobileLayout) {
+      toggleMobilePanel(name);
+      return;
+    }
+    const panel = document.querySelector(`[data-mobile-panel-name="${name}"]`);
+    if (panel) {
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }
 
   function closeMobilePanels() {
