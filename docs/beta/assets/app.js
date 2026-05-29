@@ -133,7 +133,7 @@
       leaderboardEmpty: "No scores yet.",
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
-      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 6,390.",
+      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 6,890.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       promptCancel: "Cancel",
       promptContinue: "Continue",
@@ -212,7 +212,7 @@
       leaderboardEmpty: "Todavía no hay puntajes.",
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
-      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 6,390.",
+      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 6,890.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       promptCancel: "Cancelar",
       promptContinue: "Continuar",
@@ -2929,6 +2929,7 @@
 
   function manorGroupKill() {
     writeKey(`story.manor_group_kill_${state.player.class}`);
+    state.player.flags.cleanGetawayDistrict = false;
     unlock("group_kill");
     ensureScoreState();
     state.player.score.fightsWon += 1;
@@ -2937,6 +2938,7 @@
   }
 
   function manorCombat() {
+    state.player.flags.cleanGetawayDistrict = false;
     startCombat(["goblin", "goblin", "goblin", "goblin", "goblin", "orc", "orc"], "story.manor_combat_victory", {
       attackersPerRound: 1,
       onWin: manorWin,
@@ -3002,6 +3004,7 @@
 
   function smallShack() {
     writeKey("story.small_shack");
+    state.player.flags.cleanGetawayDistrict = false;
     startCombat(["gremlin", "ghoul"], "story.small_shack_win", {
       attackersPerRound: 2,
       onWin: () => {
@@ -3043,6 +3046,7 @@
   }
 
   function mimicFightOne() {
+    state.player.flags.cleanGetawayDistrict = false;
     startCombat(["mimic"], "story.mimic_house_fight_one_win", {
       attackersPerRound: 1,
       deathReason: "mimic",
@@ -3535,10 +3539,13 @@
   }
 
   function putSilverMaskBackOn() {
+    const hadClaimedMaskPower = state.player.flags.maskPowerClaimed;
     state.player.flags.wearingSilverMask = true;
     state.player.flags.bridgeEndMaskResolved = true;
     applySilverMaskPower();
-    unlock("this_is_mine_now");
+    if (hadClaimedMaskPower) {
+      unlock("this_is_mine_now");
+    }
     writeKey("story.silver_mask_put_on_after_order");
     writeCurrentScore();
     showBridgeEndChoices();
@@ -3819,9 +3826,12 @@
   }
 
   function castlePutOnMask() {
+    const hadClaimedMaskPower = state.player.flags.maskPowerClaimed;
     state.player.flags.wearingSilverMask = true;
     applySilverMaskPower();
-    unlock("this_is_mine_now");
+    if (hadClaimedMaskPower) {
+      unlock("this_is_mine_now");
+    }
     writeKey("story.castle_put_on_mask");
     castleApproach();
   }
