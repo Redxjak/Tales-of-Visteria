@@ -16,8 +16,17 @@ This game may contain vulgar language and dark fantasy themes.
 
 Browser version:
 
-- English: [https://redxjak.github.io/ToV/en](https://redxjak.github.io/ToV/en)
-- Spanish: [https://redxjak.github.io/ToV/es](https://redxjak.github.io/ToV/es)
+- English: [https://redxjak.github.io/Tales-of-Visteria/en/](https://redxjak.github.io/Tales-of-Visteria/en/)
+- Spanish: [https://redxjak.github.io/Tales-of-Visteria/es/](https://redxjak.github.io/Tales-of-Visteria/es/)
+
+## Canonical repository and site
+
+This repository is the single source of truth for Tales of Visteria:
+
+- Canonical repo: [Redxjak/Tales-of-Visteria](https://github.com/Redxjak/Tales-of-Visteria)
+- Canonical site: [https://redxjak.github.io/Tales-of-Visteria/](https://redxjak.github.io/Tales-of-Visteria/)
+
+Publish game updates from this repository's `main` branch and `docs/` folder. Do not publish new game updates to `Redxjak/ToV`.
 
 ## Text and translations
 

@@ -9,8 +9,8 @@ The beta site is an app-gated preview that uses separate browser storage and sep
 
 On the current GitHub Pages site, that will be:
 
-- `https://redxjak.github.io/ToV/beta/en/`
-- `https://redxjak.github.io/ToV/beta/es/`
+- `https://redxjak.github.io/Tales-of-Visteria/beta/en/`
+- `https://redxjak.github.io/Tales-of-Visteria/beta/es/`
 
 ## Supabase Setup
 
