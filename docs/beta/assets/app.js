@@ -745,7 +745,6 @@
             <div class="mobile-info-menu-panel">
               <button type="button" data-mobile-panel="character">${ui.characterSheet}</button>
               <button type="button" data-mobile-panel="plot">${ui.plotDevelopment}</button>
-              <button type="button" data-mobile-panel="achievements">${ui.achievementsLabel}</button>
             </div>
           </details>
         </div>
@@ -753,7 +752,6 @@
       </header>
       <section class="layout">
         <aside class="side-panel player-panel" data-mobile-panel-name="character">
-          <button class="mobile-panel-close" type="button">${ui.closeLog}</button>
           <h2 class="panel-title">${ui.characterSheet}</h2>
           <div id="sheet" class="sheet"></div>
         </aside>
@@ -761,14 +759,8 @@
           <div id="story" class="story"></div>
         </section>
         <aside class="side-panel plot-panel" data-mobile-panel-name="plot">
-          <button class="mobile-panel-close" type="button">${ui.closeLog}</button>
           <h2 class="panel-title">${ui.plotDevelopment}</h2>
           <div id="plot" class="plot"></div>
-        </aside>
-        <aside class="side-panel mobile-achievements-panel" data-mobile-panel-name="achievements">
-          <button class="mobile-panel-close" type="button">${ui.closeLog}</button>
-          <h2 class="panel-title">${ui.achievementsLabel}</h2>
-          <div id="mobile-achievements" class="plot"></div>
         </aside>
       </section>
       <section id="log-panel" class="embedded-log" hidden>
@@ -881,7 +873,6 @@
     bindAccountMenu();
     document.getElementById("sheet").innerHTML = sheetText();
     document.getElementById("plot").textContent = plotText();
-    document.getElementById("mobile-achievements").textContent = achievementsText();
     document.getElementById("log-content").innerHTML = state.logParts.length ? state.logParts.join("") : escapeHtml(ui.emptyLog);
     syncMusicButton();
     document.getElementById("log-button").onclick = toggleLog;
@@ -1046,9 +1037,6 @@
         };
       });
     }
-    document.querySelectorAll(".mobile-panel-close").forEach((button) => {
-      button.onclick = closeMobilePanels;
-    });
     syncMobilePanels();
   }
 
