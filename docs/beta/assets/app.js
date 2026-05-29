@@ -1460,8 +1460,8 @@
       "",
       `Name: ${creator.name}`,
       `Class: ${build.title}`,
-      `Rolled stats: ${creator.rolls.join(", ")}`,
-      `Assigned stats: ${betaAttributeLine(creator.assignedStats)}`,
+      "Assigned Stats:",
+      betaAttributeList(creator.assignedStats),
       "",
       "Stats are rolled as 4d6 drop lowest and auto-assigned to this class's best attributes."
     ].join("\n"), true);
@@ -1746,6 +1746,17 @@
 
   function betaAttributeLine(attributes) {
     return `STR ${attributes.str} | DEX ${attributes.dex} | CON ${attributes.con} | INT ${attributes.int} | WIS ${attributes.wis} | CHA ${attributes.cha}`;
+  }
+
+  function betaAttributeList(attributes) {
+    return [
+      `Strength: ${attributes.str}`,
+      `Dexterity: ${attributes.dex}`,
+      `Constitution: ${attributes.con}`,
+      `Intelligence: ${attributes.int}`,
+      `Wisdom: ${attributes.wis}`,
+      `Charisma: ${attributes.cha}`
+    ].join("\n");
   }
 
   function continueChapter(chapter, clear = false) {
