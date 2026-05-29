@@ -598,6 +598,16 @@
       wrong_turn_right_lesson: "Wrong Turn, Right Lesson",
       haunted_carry_on: "Haunted Carry-On",
       this_is_mine_now: "This Is Mine Now",
+      mimic_survivor: "Mimic Survivor",
+      false_confidence: "False Confidence",
+      obliviarch_revealed: "Hydra? I Hardly Know Ya",
+      crownbreaker: "Crownbreaker",
+      cartographers_nightmare: "Cartographer's Nightmare",
+      mercy_has_luggage: "Mercy Has Luggage",
+      ale_chemistry: "Ale Chemistry",
+      clean_getaway: "Clean Getaway",
+      overprepared: "Overprepared",
+      bad_idea_connoisseur: "Bad Idea Connoisseur",
       union_violation: "Union Violation",
       aggressively_educational: "Aggressively Educational",
       free_wazetax: "Free Wazetax",
@@ -634,6 +644,16 @@
       wrong_turn_right_lesson: "Giro equivocado, lección correcta",
       haunted_carry_on: "Equipaje encantado",
       this_is_mine_now: "Esto ahora es mío",
+      mimic_survivor: "Superviviente del mimic",
+      false_confidence: "Falsa confianza",
+      obliviarch_revealed: "¿Hydra? Apenas la conozco",
+      crownbreaker: "Rompecoronas",
+      cartographers_nightmare: "Pesadilla de cartógrafo",
+      mercy_has_luggage: "La misericordia trae equipaje",
+      ale_chemistry: "Química de cerveza",
+      clean_getaway: "Escape limpio",
+      overprepared: "Sobrepreparado",
+      bad_idea_connoisseur: "Conocedor de malas ideas",
       union_violation: "Violación sindical",
       aggressively_educational: "Agresivamente educativo",
       free_wazetax: "Liberen a Wazetax",
@@ -1821,6 +1841,7 @@
         bridgeRested: false,
         hasDwarvenAle: false,
         hasMagistoneOrb: false,
+        cleanGetawayDistrict: false,
         hasSilverMask: false,
         wearingSilverMask: false,
         maskPowerClaimed: false,
@@ -1934,6 +1955,7 @@
       bridgeRested: false,
       hasDwarvenAle: false,
       hasMagistoneOrb: false,
+      cleanGetawayDistrict: false,
       hasSilverMask: false,
       wearingSilverMask: false,
       maskPowerClaimed: false,
@@ -2679,6 +2701,7 @@
       barracksCombat();
     } else {
       writeKey(type === "armory" ? "story.barracks_armory_success" : "story.barracks_quarters_success");
+      state.player.flags.cleanGetawayDistrict = true;
       searchLoot(() => continueChapter("residential"), "barracks");
     }
   }
@@ -2718,6 +2741,7 @@
       merchantCombat();
     } else {
       writeKey("story.city_shop_success");
+      state.player.flags.cleanGetawayDistrict = true;
       searchLoot(() => continueChapter("residential"), "merchant");
     }
   }
@@ -2730,6 +2754,7 @@
       merchantCombat();
     } else {
       writeKey("story.city_sneak_success");
+      state.player.flags.cleanGetawayDistrict = true;
       continueChapter("residential");
     }
   }
@@ -3066,6 +3091,7 @@
   function resolveMimicTongueEscape(method, successChance) {
     if (Math.random() < successChance) {
       writeKey(`story.mimic_house_tongue_${method}_success`);
+      unlock("mimic_survivor");
       setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
       return;
     }
@@ -3098,6 +3124,7 @@
     if (state.player.flags.hasDwarvenAle || state.player.gear.includes("dwarven ale")) {
       options.push(choice(t("choice.pour_ale"), () => {
         removeItem("dwarven ale");
+        unlock("ale_chemistry");
         writeKey("story.mimic_house_ale");
         setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
       }));
@@ -3148,6 +3175,9 @@
     writeKey("story.bridge_sneak_start");
     if (rollD20("sneak") >= 13) {
       writeKey("story.bridge_sneak_success");
+      if (state.player.flags.cleanGetawayDistrict) {
+        unlock("clean_getaway");
+      }
       bridgeNavigationStart();
       return;
     }
@@ -3194,6 +3224,8 @@
       unlock("bridge_cleared");
       if (state.player.flags.hasThroneMap) {
         unlock("bridge_scholar");
+      } else if (state.player.flags.hasPartialMap) {
+        unlock("cartographers_nightmare");
       } else {
         unlock("blind_crossing");
       }
@@ -3455,6 +3487,7 @@
       writeKey("story.bridge_end_rest");
     }
     resolveBridgeEndMask();
+    checkOverprepared();
     unlock("warehouse_survived");
     recordEnding();
     writeCurrentScore();
@@ -3920,6 +3953,9 @@
   function throneRoomPull() {
     if (state.player.flags.hasDoll) {
       state.player.flags.dollRevealed = true;
+      if (state.player.flags.pickedUpDoll) {
+        unlock("mercy_has_luggage");
+      }
       writeKey("story.throne_room_pull_known");
     } else if (state.player.flags.dollInSack) {
       state.player.flags.hasDoll = true;
@@ -3970,10 +4006,14 @@
     state.player.flags.wearingSilverMask = true;
     state.player.flags.playerSuccumbedToMask = true;
     applySilverMaskPower();
+    unlock("this_is_mine_now");
     maskCorruptionEnding();
   }
 
   function throneRoomResistMask() {
+    if (state.player.flags.maskPowerClaimed) {
+      unlock("false_confidence");
+    }
     writeKey("story.throne_room_resist_mask");
     resistanceSummoning();
   }
@@ -3996,6 +4036,7 @@
   function resistanceSummoning() {
     writeKey("story.doll_summoning");
     writeHtml(`<figure class="boss-reveal"><img src="${ASSET_BASE}/obliviarch.png" alt="Obliviarch"><figcaption>Obliviarch</figcaption></figure>`);
+    unlock("obliviarch_revealed");
     setChoices([choice(t("choice.face_false_hydra"), obliviarchPhaseOne)]);
   }
 
@@ -4052,6 +4093,7 @@
     state.player.flags.hasDoll = false;
     state.player.flags.dollInSack = false;
     removeItem("cracked doll");
+    unlock("crownbreaker");
     writeKey("story.obliviarch_destroyed");
     orderEntersThroneRoom();
   }
@@ -4799,10 +4841,28 @@
   }
 
   function unlock(id) {
+    if (!state.stats._achievements) {
+      state.stats._achievements = {};
+    }
     if (!state.stats._achievements[id]) {
       state.stats._achievements[id] = true;
       saveStats();
       writeKey("ui.achievement_unlocked", { name: achievements[id] || id, description: "" });
+    }
+  }
+
+  function checkOverprepared() {
+    if (!state.player || !state.player.flags) {
+      return;
+    }
+    const flags = state.player.flags;
+    if (
+      flags.hasThroneMap &&
+      flags.hasMagistoneOrb &&
+      (flags.hasDoll || flags.dollInSack) &&
+      flags.hasSilverMask
+    ) {
+      unlock("overprepared");
     }
   }
 
@@ -4836,6 +4896,7 @@
     if (state.player && !state.player.flags.deathRecorded) {
       state.stats[state.player.class].died += 1;
       state.player.flags.deathRecorded = true;
+      recordSpecialDeathAchievement(state.player.gameOverReason);
       checkDeathAchievements();
       saveStats();
     }
@@ -4847,6 +4908,21 @@
     const totalDeaths = Object.keys(classes).reduce((total, key) => total + (state.stats[key] ? state.stats[key].died || 0 : 0), 0);
     if (totalDeaths > 20) {
       unlock("all_day");
+    }
+  }
+
+  function recordSpecialDeathAchievement(reason) {
+    if (!reason || reason === "default" || reason === "combat") {
+      return;
+    }
+    if (!Array.isArray(state.stats._deathReasons)) {
+      state.stats._deathReasons = [];
+    }
+    if (!state.stats._deathReasons.includes(reason)) {
+      state.stats._deathReasons.push(reason);
+    }
+    if (state.stats._deathReasons.length >= 3) {
+      unlock("bad_idea_connoisseur");
     }
   }
 
@@ -5464,6 +5540,9 @@
     if (state.player.flags.districtsRested === undefined) {
       state.player.flags.districtsRested = false;
     }
+    if (state.player.flags.cleanGetawayDistrict === undefined) {
+      state.player.flags.cleanGetawayDistrict = false;
+    }
     if (state.player.flags.smallShackCleared === undefined) {
       state.player.flags.smallShackCleared = false;
     }
@@ -5519,7 +5598,7 @@
   }
 
   function defaultStats() {
-    const stats = { _achievements: {} };
+    const stats = { _achievements: {}, _deathReasons: [] };
     Object.keys(classes).forEach((key) => {
       stats[key] = {
         name: classes[key].name,
