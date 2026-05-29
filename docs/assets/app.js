@@ -357,7 +357,21 @@
       high_ac: "Can't touch this",
       big_damage: "Unlimited powa",
       maxed_out: "Maxed out",
-      all_day: "I can do this all day"
+      all_day: "I can do this all day",
+      map_goblin: "Map Goblin",
+      wrong_turn_right_lesson: "Wrong Turn, Right Lesson",
+      haunted_carry_on: "Haunted Carry-On",
+      this_is_mine_now: "This Is Mine Now",
+      union_violation: "Union Violation",
+      aggressively_educational: "Aggressively Educational",
+      free_wazetax: "Free Wazetax",
+      no_one_left_in_cage: "No One Gets Left in a Cage",
+      not_my_problem: "Not My Problem",
+      bridge_scholar: "Bridge Scholar",
+      blind_crossing: "Blind Crossing",
+      cult_breaker: "Cult Breaker",
+      customer_service: "Customer Service",
+      osha_incident: "OSHA Incident"
     },
     es: {
       first_fight: "Primera sangre",
@@ -379,7 +393,21 @@
       high_ac: "No puedes tocar esto",
       big_damage: "Powa ilimitado",
       maxed_out: "Al máximo",
-      all_day: "Puedo hacer esto todo el día"
+      all_day: "Puedo hacer esto todo el día",
+      map_goblin: "Goblin de mapas",
+      wrong_turn_right_lesson: "Giro equivocado, lección correcta",
+      haunted_carry_on: "Equipaje encantado",
+      this_is_mine_now: "Esto ahora es mío",
+      union_violation: "Violación sindical",
+      aggressively_educational: "Agresivamente educativo",
+      free_wazetax: "Liberen a Wazetax",
+      no_one_left_in_cage: "Nadie queda en una jaula",
+      not_my_problem: "No es mi problema",
+      bridge_scholar: "Erudito del puente",
+      blind_crossing: "Cruce a ciegas",
+      cult_breaker: "Rompecultos",
+      customer_service: "Servicio al cliente",
+      osha_incident: "Incidente laboral"
     }
   };
   const achievements = achievementsByLanguage[lang] || achievementsByLanguage.en;
@@ -1863,7 +1891,7 @@
       barracksCombat();
     } else {
       writeKey(type === "armory" ? "story.barracks_armory_success" : "story.barracks_quarters_success");
-      searchLoot(() => continueChapter("residential"));
+      searchLoot(() => continueChapter("residential"), "barracks");
     }
   }
 
@@ -1873,7 +1901,7 @@
       attackersPerRound: 1,
       onWin: () => {
         writeKey("story.combat_loot_map");
-        awardMap();
+        awardMap("barracks");
         continueChapter("residential");
       },
       onRun: () => continueChapter("residential")
@@ -1902,7 +1930,7 @@
       merchantCombat();
     } else {
       writeKey("story.city_shop_success");
-      searchLoot(() => continueChapter("residential"));
+      searchLoot(() => continueChapter("residential"), "merchant");
     }
   }
 
@@ -1924,14 +1952,14 @@
       attackersPerRound: 1,
       onWin: () => {
         writeKey("story.combat_loot_map");
-        awardMap();
+        awardMap("merchant");
         continueChapter("residential");
       },
       onRun: () => continueChapter("residential")
     });
   }
 
-  function searchLoot(next) {
+  function searchLoot(next, source = "") {
     const roll = rollD20("search");
     awardDecisionXp("search");
     if (roll <= 7) {
@@ -1942,14 +1970,21 @@
     } else if (roll <= 14) {
       writeKey("story.search_potion");
       addItem("health potion");
+      if (source === "merchant") {
+        unlock("customer_service");
+      }
     } else {
-      awardMap();
+      awardMap(source);
     }
     setChoices([choice(ui.moveOn, next)]);
   }
 
-  function awardMap() {
+  function awardMap(source = "") {
     state.player.flags.hasThroneMap = true;
+    unlock("map_goblin");
+    if (source === "merchant") {
+      unlock("customer_service");
+    }
     writeKey("story.throne_map", { directions: bridgeDirectionList() });
   }
 
@@ -2350,6 +2385,7 @@
     const route = bridgeRoute();
     const step = state.player.flags.bridgeNavigationStep || 0;
     if (direction !== route[step]) {
+      unlock("wrong_turn_right_lesson");
       writeKey("story.bridge_wrong");
       state.player.gameOverReason = "bridge_trap";
       state.player.health = 0;
@@ -2360,6 +2396,11 @@
     if (state.player.flags.bridgeNavigationStep >= route.length) {
       writeKey("story.bridge_success");
       unlock("bridge_cleared");
+      if (state.player.flags.hasThroneMap) {
+        unlock("bridge_scholar");
+      } else {
+        unlock("blind_crossing");
+      }
       warehouseRitual();
       return;
     }
@@ -2436,6 +2477,7 @@
       deathReason: "warehouse",
       onWin: () => {
         state.player.flags.warehouseStage = "leader_defeated";
+        unlock("cult_breaker");
         silverMaskChoice();
       }
     });
@@ -2637,6 +2679,7 @@
     state.player.flags.wearingSilverMask = true;
     state.player.flags.bridgeEndMaskResolved = true;
     applySilverMaskPower();
+    unlock("this_is_mine_now");
     writeKey("story.silver_mask_put_on_after_order");
     writeCurrentScore();
     showBridgeEndChoices();
@@ -2769,6 +2812,7 @@
       }
     }
     if (roll >= 11) {
+      unlock("osha_incident");
       writeKey("story.orc_party_ale_success");
       orcCages();
       return;
@@ -2796,12 +2840,18 @@
   function orcPartyFightChoice() {
     writeKey("story.orc_party_fight_warning");
     setChoices([
-      choice(t("choice.fall_back_to_cages"), orcCages),
+      choice(t("choice.fall_back_to_cages"), orcPartyFallBack),
       choice(t("choice.keep_fighting_party"), orcPartyFightDisaster)
     ]);
   }
 
+  function orcPartyFallBack() {
+    unlock("union_violation");
+    orcCages();
+  }
+
   function orcPartyFightDisaster() {
+    unlock("aggressively_educational");
     writeKey("story.orc_party_fight_disaster");
     startCombat(Array(30).fill("orc"), "story.orc_party_win", {
       attackersPerRound: 6,
@@ -2824,12 +2874,14 @@
     state.player.flags.rescuedWazetax = true;
     state.player.flags.wazetaxHidden = false;
     state.player.flags.wazetaxQuestionsAsked = [];
+    unlock("free_wazetax");
     writeKey("story.wazetax_rescue");
     castleFrontWithWazetax();
   }
 
   function leaveWazetax() {
     state.player.flags.rescuedWazetax = false;
+    unlock("not_my_problem");
     writeKey("story.wazetax_left");
     castleExteriorEndpoint(true);
   }
@@ -2868,6 +2920,7 @@
 
   function hideWazetax() {
     state.player.flags.wazetaxHidden = true;
+    unlock("no_one_left_in_cage");
     writeKey("story.wazetax_hide");
     castleExteriorEndpoint(true);
   }
@@ -2909,6 +2962,7 @@
   function castlePutOnMask() {
     state.player.flags.wearingSilverMask = true;
     applySilverMaskPower();
+    unlock("this_is_mine_now");
     writeKey("story.castle_put_on_mask");
     castleApproach();
   }
@@ -3033,6 +3087,7 @@
       state.player.flags.hasDoll = true;
       state.player.flags.dollRevealed = true;
       addItem("cracked doll");
+      unlock("haunted_carry_on");
       writeKey("story.throne_room_pull_hidden");
     } else {
       writeKey("story.throne_room_pull_no_doll");
