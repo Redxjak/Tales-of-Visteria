@@ -54,6 +54,10 @@
     low: 0.24,
     combat: 0.5
   };
+  const GAME_OVER_IMAGES = {
+    hydra: { file: "false_hydra.png", alt: "False hydra" },
+    false_hydra: { file: "obliviarch.png", alt: "Obliviarch" }
+  };
   const CHAPTER_MUSIC = {
     dmIntro: "epic",
     dmGhost: "ambient",
@@ -128,8 +132,12 @@
       leaderboardEmpty: "No scores yet.",
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
-      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time.",
+      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 5,825.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
+      promptCancel: "Cancel",
+      promptContinue: "Continue",
+      promptConfirm: "Confirm",
+      submitScoreWarning: "Submitting your score leaves the current run screen. Use Load Game afterward to restore this saved session.",
       loginScreen: "Sign in, create an account, or play as a guest",
       displayNamePrompt: "Choose a public username:",
       emailPrompt: "Email address:",
@@ -203,8 +211,12 @@
       leaderboardEmpty: "Todavía no hay puntajes.",
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
-      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento.",
+      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 5,825.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
+      promptCancel: "Cancelar",
+      promptContinue: "Continuar",
+      promptConfirm: "Confirmar",
+      submitScoreWarning: "Enviar tu puntaje te saca de la pantalla de la partida actual. Usa Cargar partida despues para restaurar esta sesion guardada.",
       loginScreen: "Inicia sesion, crea una cuenta o juega como invitado",
       displayNamePrompt: "Elige un nombre publico:",
       emailPrompt: "Correo electronico:",
@@ -255,7 +267,7 @@
     "choice.sneak_bridge": "Sneak Across the Bridge",
     "choice3.sneak_bridge": "Sneak Across the Bridge",
     "story.level_up_title": "Level up!",
-    "story.level_up_body": "+2 Health\nChoose your level up reward."
+    "story.level_up_body": "+4 Health\nChoose your level up reward."
   };
 
   const classes = {
@@ -520,6 +532,22 @@
     hex_bolt: { name: "Hex Bolt", cost: 3, type: "spell", damageDie: 12, attackBonus: 1, damageBonus: 3, text: "The focus spits a black-edged curse." }
   };
 
+  const betaAttributeHelp = {
+    str: "Strength affects melee attack chance and melee damage.",
+    dex: "Dexterity affects AC, ranged attack chance, and ranged damage.",
+    con: "Constitution adds maximum health at character creation.",
+    int: "Intelligence is a knowledge stat for later beta features.",
+    wis: "Wisdom supports awareness, survival, and ranger-style choices.",
+    cha: "Charisma affects warlock spell attacks, spell damage, and social pressure."
+  };
+
+  const betaClassCombatLabels = {
+    warrior: { attack: "Reckless Chop", heavy: "Crushing Overhand" },
+    ranger: { attack: "Quick Shot", heavy: "Aimed Shot" },
+    scholar: { attack: "Eldritch Jab", heavy: "Focused Blast" },
+    dwarf: { attack: "Shielded Strike", heavy: "Power Cleave" }
+  };
+
   const monsterStats = {
     goblin: { name: "Goblin", ac: 15, hp: 7, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 20 },
     orc: { name: "Orc", ac: 13, hp: 15, attackBonus: 5, damageDie: 12, damageBonus: 3, xp: 35 },
@@ -528,7 +556,7 @@
     mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 },
     cultist: { name: "Masked Cultist", ac: 13, hp: 12, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
     ritualLeader: { name: "Cultist Leader", ac: 15, hp: 42, attackBonus: 7, damageDie: 10, damageBonus: 4, xp: 90 },
-    falseHydra: { name: "False Hydra", ac: 16, hp: 95, attackBonus: 8, damageDie: 12, damageBonus: 5, xp: 250 }
+    falseHydra: { name: "Obliviarch", ac: 19, hp: 350, attackBonus: 14, damageDie: 10, damageBonus: 8, xp: 155000 }
   };
 
   const achievementsByLanguage = {
@@ -661,10 +689,12 @@
     faqVisible: false,
     creditsVisible: false,
     showGameOverImage: false,
+    gameOverImage: null,
     awaitingLevelReward: false,
     levelRewardChoices: [],
     pendingChoices: null,
     pendingLevelContinuation: null,
+    promptDialog: null,
     activeMobilePanel: null,
     oauthLoginFailed: false,
     betaAccessChecked: false,
@@ -700,6 +730,7 @@
       }
     }
     drawShell();
+    bindFirstGestureAudio();
     if (state.account && canEnterGame()) {
       showStart();
     } else {
@@ -793,6 +824,17 @@
           <div id="level-modal-choices" class="modal-choices"></div>
         </div>
       </section>
+      <section id="prompt-modal" class="modal-overlay" hidden>
+        <form id="prompt-form" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-title">
+          <h2 id="prompt-modal-title"></h2>
+          <p id="prompt-modal-body"></p>
+          <input id="prompt-modal-input" class="modal-input" autocomplete="off">
+          <div class="modal-choices">
+            <button id="prompt-modal-submit" class="choice" type="submit"></button>
+            <button id="prompt-modal-cancel" class="choice choice-secondary" type="button"></button>
+          </div>
+        </form>
+      </section>
     `;
   }
 
@@ -812,6 +854,7 @@
     if (clear) {
       state.storyParts = [];
       state.showGameOverImage = false;
+      state.gameOverImage = null;
     }
     const escapedText = escapeHtml(text);
     if (state.storyParts.length) {
@@ -829,6 +872,7 @@
     if (clear) {
       state.storyParts = [];
       state.showGameOverImage = false;
+      state.gameOverImage = null;
     }
     if (state.storyParts.length) {
       state.storyParts.push("<hr>");
@@ -863,10 +907,11 @@
   function render() {
     document.getElementById("story").innerHTML = state.storyParts.join("");
     if (state.showGameOverImage) {
+      const gameOverImage = state.gameOverImage || { file: "game_over_party.png", alt: "Tales of Visteria party" };
       const img = document.createElement("img");
       img.className = "game-over-image";
-      img.alt = "Tales of Visteria party";
-      img.src = `${ASSET_BASE}/game_over_party.png`;
+      img.alt = gameOverImage.alt;
+      img.src = `${ASSET_BASE}/${gameOverImage.file}`;
       document.getElementById("story").appendChild(img);
     }
     document.getElementById("status").textContent = statusText();
@@ -887,6 +932,7 @@
     document.getElementById("close-credits").onclick = hideCredits;
     document.getElementById("credits-panel").hidden = !state.creditsVisible;
     renderLevelModal();
+    renderPromptModal();
     const choiceArea = document.getElementById("choices");
     choiceArea.innerHTML = "";
     state.choices.forEach((choice) => {
@@ -894,6 +940,10 @@
       button.className = "choice";
       button.type = "button";
       button.textContent = choice.label;
+      if (choice.detail) {
+        button.title = choice.detail;
+        button.setAttribute("aria-label", `${choice.label}. ${choice.detail}`);
+      }
       button.addEventListener("click", () => {
         if (state.combat && state.player && state.player.health <= 0) {
           finishCombatDeath();
@@ -926,14 +976,59 @@
       button.className = "choice";
       button.type = "button";
       button.textContent = levelChoice.label;
+      if (levelChoice.detail) {
+        button.title = levelChoice.detail;
+        button.setAttribute("aria-label", `${levelChoice.label}. ${levelChoice.detail}`);
+      }
       button.addEventListener("click", levelChoice.action);
       choiceArea.appendChild(button);
     });
   }
 
+  function renderPromptModal() {
+    const modal = document.getElementById("prompt-modal");
+    if (!modal) {
+      return;
+    }
+    const dialog = state.promptDialog;
+    modal.hidden = !dialog;
+    if (!dialog) {
+      return;
+    }
+    const form = document.getElementById("prompt-form");
+    const input = document.getElementById("prompt-modal-input");
+    document.getElementById("prompt-modal-title").textContent = dialog.title;
+    document.getElementById("prompt-modal-body").textContent = dialog.body || "";
+    document.getElementById("prompt-modal-submit").textContent = dialog.confirmLabel || ui.promptContinue;
+    document.getElementById("prompt-modal-cancel").textContent = dialog.cancelLabel || ui.promptCancel;
+    input.hidden = !dialog.input;
+    input.type = dialog.password ? "password" : "text";
+    input.value = dialog.value || "";
+    input.placeholder = dialog.placeholder || "";
+    form.onsubmit = (event) => {
+      event.preventDefault();
+      closePromptDialog(dialog.input ? input.value.trim() : true);
+    };
+    document.getElementById("prompt-modal-cancel").onclick = () => closePromptDialog("");
+    if (dialog.input) {
+      setTimeout(() => input.focus(), 0);
+    }
+  }
+
+  function closePromptDialog(value) {
+    const dialog = state.promptDialog;
+    if (!dialog) {
+      return;
+    }
+    state.promptDialog = null;
+    render();
+    dialog.resolve(value);
+  }
+
   function beginVisibleScene() {
     state.storyParts = [];
     state.showGameOverImage = false;
+    state.gameOverImage = null;
   }
 
   function setMusic(track, options = {}) {
@@ -983,6 +1078,18 @@
       stopMusic();
       syncMusicButton();
     }
+  }
+
+  function bindFirstGestureAudio() {
+    const unlock = () => {
+      if (state.music.enabled && state.music.current !== "silence") {
+        setMusic(state.music.current, { volume: state.music.volume });
+      }
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+    document.addEventListener("pointerdown", unlock, { once: true });
+    document.addEventListener("keydown", unlock, { once: true });
   }
 
   function syncMusicButton() {
@@ -1174,6 +1281,9 @@
     const account = state.account || {};
     const player = state.player || {};
     const lines = [
+      "Please also post this beta report in Discord so the beta channel sees it quickly:",
+      DISCORD_URL,
+      "",
       "## What happened?",
       "",
       "",
@@ -1316,11 +1426,17 @@
   }
 
   async function signIn() {
-    const email = promptText(ui.loginPrompt, state.account && state.account.email ? state.account.email : "");
+    const email = await promptText(ui.loginPrompt, state.account && state.account.email ? state.account.email : "", {
+      title: ui.login,
+      placeholder: "you@example.com"
+    });
     if (!email) {
       return;
     }
-    const password = promptText(ui.passwordPrompt, "");
+    const password = await promptText(ui.passwordPrompt, "", {
+      title: ui.login,
+      password: true
+    });
     if (!password) {
       return;
     }
@@ -1340,15 +1456,23 @@
   }
 
   async function createAccount() {
-    const displayName = promptText(ui.displayNamePrompt, "");
+    const displayName = await promptText(ui.displayNamePrompt, "", {
+      title: ui.createAccount
+    });
     if (!displayName) {
       return;
     }
-    const email = promptText(ui.emailPrompt, "");
+    const email = await promptText(ui.emailPrompt, "", {
+      title: ui.createAccount,
+      placeholder: "you@example.com"
+    });
     if (!email) {
       return;
     }
-    const password = promptText(ui.passwordPrompt, "");
+    const password = await promptText(ui.passwordPrompt, "", {
+      title: ui.createAccount,
+      password: true
+    });
     if (!password) {
       return;
     }
@@ -1467,10 +1591,12 @@
     ]);
   }
 
-  function showBetaCharacterName() {
+  async function showBetaCharacterName() {
     setMusic("ambient");
     const previousName = state.account && state.account.name && state.account.name !== ui.guest ? state.account.name : "";
-    const name = promptText("Character name:", previousName);
+    const name = await promptText("Character name:", previousName, {
+      title: "Create Custom Character"
+    });
     if (!name) {
       showStart();
       return;
@@ -1503,15 +1629,17 @@
       "Final Stats:",
       betaAttributeList(finalAttributes),
       "",
-      "Stats are rolled as 4d6 drop lowest, auto-assigned to this class's best attributes, then adjusted by race."
+      "Stats are rolled as 4d6 drop lowest, auto-assigned to this class's best attributes, then adjusted by race.",
+      "",
+      betaAttributeHelpText()
     ].join("\n"), true);
     setChoices([
-      choice("Keep These Stats", showBetaRaceSelect),
+      choice("Keep These Stats", showBetaWeaponSelect, { detail: "Accept this stat roll and choose a starting weapon." }),
       choice("Reroll Stats", () => {
         creator.rolls = rollBetaStatArray();
         showBetaStatRolls();
-      }),
-      choice(t("choice.back"), showBetaClassSelect)
+      }, { detail: "Roll a fresh set of attributes for this race and class." }),
+      choice(t("choice.back"), showBetaClassSelect, { detail: "Return to class selection." })
     ]);
   }
 
@@ -1530,15 +1658,15 @@
       "",
       ...Object.keys(betaClassBuilds).map((key) => {
         const build = betaClassBuilds[key];
-        return `${build.title}: ${build.description}`;
+        return `${build.title}: ${build.description}\nAbilities: ${build.abilities.map(betaPowerSummary).join("; ")}`;
       })
     ].join("\n\n"), true);
     setChoices([
-      choice("Barbarian", () => chooseBetaClass("warrior")),
-      choice("Ranger", () => chooseBetaClass("ranger")),
-      choice("Warlock", () => chooseBetaClass("scholar")),
-      choice("Fighter", () => chooseBetaClass("dwarf")),
-      choice(t("choice.back"), showBetaRaceSelect)
+      choice("Barbarian", () => chooseBetaClass("warrior"), { detail: betaClassBuilds.warrior.description }),
+      choice("Ranger", () => chooseBetaClass("ranger"), { detail: betaClassBuilds.ranger.description }),
+      choice("Warlock", () => chooseBetaClass("scholar"), { detail: betaClassBuilds.scholar.description }),
+      choice("Fighter", () => chooseBetaClass("dwarf"), { detail: betaClassBuilds.dwarf.description }),
+      choice(t("choice.back"), showBetaRaceSelect, { detail: "Return to race selection." })
     ]);
   }
 
@@ -1560,14 +1688,16 @@
       "",
       `Name: ${creator.name}`,
       "",
-      ...Object.values(betaRaces).map((race) => `${race.name}: ${race.description}`)
+      ...Object.values(betaRaces).map((race) => `${race.name}: ${race.description}${race.ability ? `\nAbility: ${betaPowerSummary(race.ability)}` : ""}`),
+      "",
+      betaAttributeHelpText()
     ].join("\n\n"), true);
     setChoices([
-      choice("Goliath", () => chooseBetaRace("goliath")),
-      choice("Elf", () => chooseBetaRace("elf")),
-      choice("Human", () => chooseBetaRace("human")),
-      choice("Dwarf", () => chooseBetaRace("dwarf")),
-      choice(t("choice.back"), showBetaCharacterName)
+      choice("Goliath", () => chooseBetaRace("goliath"), { detail: betaRaces.goliath.description }),
+      choice("Elf", () => chooseBetaRace("elf"), { detail: betaRaces.elf.description }),
+      choice("Human", () => chooseBetaRace("human"), { detail: betaRaces.human.description }),
+      choice("Dwarf", () => chooseBetaRace("dwarf"), { detail: betaRaces.dwarf.description }),
+      choice(t("choice.back"), showBetaCharacterName, { detail: "Return to name entry." })
     ]);
   }
 
@@ -1587,14 +1717,14 @@
       `${creator.name} the ${race.name} ${build.title}`,
       betaAttributeLine(finalAttributes),
       "",
-      ...Object.values(betaWeapons).map((weapon) => `${weapon.name}: ${weapon.description}`)
+      ...Object.values(betaWeapons).map((weapon) => `${weapon.name}: ${weapon.description}\nWeapon skill: ${betaPowerSummary(weapon.skill)}`)
     ].join("\n\n"), true);
     setChoices([
-      choice("Greataxe", () => newBetaPlayer("greataxe")),
-      choice("Longbow", () => newBetaPlayer("longbow")),
-      choice("Battleaxe and Shield", () => newBetaPlayer("battleaxe")),
-      choice("Eldritch Focus", () => newBetaPlayer("eldritch_focus")),
-      choice(t("choice.back"), showBetaStatRolls)
+      choice("Greataxe", () => newBetaPlayer("greataxe"), { detail: betaWeapons.greataxe.description }),
+      choice("Longbow", () => newBetaPlayer("longbow"), { detail: betaWeapons.longbow.description }),
+      choice("Battleaxe and Shield", () => newBetaPlayer("battleaxe"), { detail: betaWeapons.battleaxe.description }),
+      choice("Eldritch Focus", () => newBetaPlayer("eldritch_focus"), { detail: betaWeapons.eldritch_focus.description }),
+      choice(t("choice.back"), showBetaStatRolls, { detail: "Return to stat rolls." })
     ]);
   }
 
@@ -1807,6 +1937,36 @@
       `Wisdom: ${attributes.wis}`,
       `Charisma: ${attributes.cha}`
     ].join("\n");
+  }
+
+  function betaAttributeHelpText() {
+    return [
+      "What stats do:",
+      `STR: ${betaAttributeHelp.str}`,
+      `DEX: ${betaAttributeHelp.dex}`,
+      `CON: ${betaAttributeHelp.con}`,
+      `INT: ${betaAttributeHelp.int}`,
+      `WIS: ${betaAttributeHelp.wis}`,
+      `CHA: ${betaAttributeHelp.cha}`
+    ].join("\n");
+  }
+
+  function betaPowerSummary(powerId) {
+    const power = betaPowers[powerId];
+    if (!power) {
+      return powerId;
+    }
+    const parts = [`${power.name} (${power.cost} mana)`];
+    if (power.attackBonus) parts.push(`${power.attackBonus > 0 ? "+" : ""}${power.attackBonus} attack`);
+    if (power.damageBonus) parts.push(`${power.damageBonus > 0 ? "+" : ""}${power.damageBonus} damage`);
+    if (power.damageDie) parts.push(`d${power.damageDie} damage die`);
+    if (power.healDie) parts.push(`heals d${power.healDie} + ${power.healBonus || 0}`);
+    if (power.acBonus) parts.push(`+${power.acBonus} AC this turn`);
+    if (power.manaRestore) parts.push(`restores ${power.manaRestore} mana`);
+    if (power.turns) parts.push(`${power.turns} turns`);
+    if (power.healHalf) parts.push("heals for half damage dealt");
+    if (power.guard) parts.push("also guards");
+    return `${parts.join(", ")}. ${power.text}`;
   }
 
   function continueChapter(chapter, clear = false) {
@@ -3146,13 +3306,18 @@
     writeKey("story.warehouse_leave");
     setMusic("silence");
     setChoices([
-      choice(t("choice.stand_ground"), falseHydraInterruption),
-      choice(t("choice.run_for_life"), falseHydraInterruption)
+      choice(t("choice.stand_ground"), () => falseHydraInterruption("stand"), { detail: "Face the creature for as long as your nerve holds." }),
+      choice(t("choice.run_for_life"), () => falseHydraInterruption("run"), { detail: "Run from the creature before the bridge gives out." })
     ]);
   }
 
-  function falseHydraInterruption() {
+  function falseHydraInterruption(reaction = "") {
     setMusic("silence");
+    if (reaction === "stand") {
+      write("You plant your feet and raise your weapon. The choice is yours, even if the world has other plans.");
+    } else if (reaction === "run") {
+      write("You turn and run hard enough for your lungs to burn. The choice is yours, even if the world has other plans.");
+    }
     writeKey("story.false_hydra_interruption");
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.order_mask_warning");
@@ -3671,7 +3836,18 @@
 
   function castleInnerCorridor() {
     writeKey("story.castle_inner_corridor");
-    setChoices([choice(t("choice.follow_doll_pull"), throneRoomPull)]);
+    const choices = [];
+    if (!state.player.flags.kingsStudyFound) {
+      choices.push(choice(t("choice.search_kings_study"), kingsStudy));
+    }
+    choices.push(choice(t("choice.follow_doll_pull"), throneRoomPull));
+    setChoices(choices);
+  }
+
+  function kingsStudy() {
+    state.player.flags.kingsStudyFound = true;
+    writeKey("story.kings_study");
+    setChoices([choice(t("choice.return_corridor"), castleInnerCorridor)]);
   }
 
   function throneRoomPull() {
@@ -3709,6 +3885,7 @@
   }
 
   function falseHydraFinalBoss() {
+    writeHtml(`<figure class="boss-reveal"><img src="${ASSET_BASE}/obliviarch.png" alt="Obliviarch"><figcaption>Obliviarch</figcaption></figure>`);
     startCombat(["falseHydra"], "story.false_hydra_final_win", {
       attackersPerRound: 1,
       deathReason: "false_hydra",
@@ -3766,25 +3943,41 @@
       finishCombatDeath();
       return;
     }
+    const attackLabels = betaCombatActionLabels();
     const labels = [
-      choice(t("choice.attack"), () => playerAttack(false)),
-      choice(t("choice.heavy_attack"), () => playerAttack(true)),
-      choice(t("choice.dodge"), dodge),
-      choice(t("choice.run"), runCombat)
+      choice(attackLabels.attack, () => playerAttack(false), { detail: combatChoiceDetail(false) }),
+      choice(attackLabels.heavy, () => playerAttack(true), { detail: combatChoiceDetail(true) }),
+      choice(t("choice.dodge"), dodge, { detail: "Guard for the enemy turn, raising your AC before enemies attack." }),
+      choice(t("choice.run"), runCombat, { detail: "Try to escape combat with a sneak roll." })
     ];
     if (state.player.betaCustom) {
       betaCombatChoices().forEach((betaChoice) => labels.splice(labels.length - 2, 0, betaChoice));
     }
     if (state.player.gear.includes("health potion")) {
-      labels.push(choice(t("choice.health_potion"), drinkPotion));
+      labels.push(choice(t("choice.health_potion"), drinkPotion, { detail: "Drink a health potion to heal 2d4 + 6 before enemies respond." }));
     }
     setChoices(labels);
   }
 
   function betaCombatChoices() {
     return (state.player.knownAbilities || [])
-      .map((id) => betaPowers[id] ? choice(`${betaPowers[id].name} (${betaPowers[id].cost} Mana)`, () => useBetaPower(id)) : null)
+      .map((id) => betaPowers[id] ? choice(`${betaPowers[id].name} (${betaPowers[id].cost} Mana)`, () => useBetaPower(id), { detail: betaPowerSummary(id) }) : null)
       .filter(Boolean);
+  }
+
+  function betaCombatActionLabels() {
+    if (!state.player.betaCustom) {
+      return { attack: t("choice.attack"), heavy: t("choice.heavy_attack") };
+    }
+    return betaClassCombatLabels[state.player.class] || { attack: t("choice.attack"), heavy: t("choice.heavy_attack") };
+  }
+
+  function combatChoiceDetail(heavy) {
+    const stats = combatStats();
+    if (heavy) {
+      return `One attack at d${stats.damageDie + 4} + ${stats.damageBonus} damage with ${stats.attackBonus - 1 >= 0 ? "+" : ""}${stats.attackBonus - 1} to hit.`;
+    }
+    return `${stats.attacks} attack${stats.attacks === 1 ? "" : "s"} at d${stats.damageDie} + ${stats.damageBonus} damage with ${stats.attackBonus >= 0 ? "+" : ""}${stats.attackBonus} to hit.`;
   }
 
   function playerAttack(heavy) {
@@ -4145,8 +4338,8 @@
         unlock("maxed_out");
       }
       state.player.xpToNext = BASE_XP_TO_NEXT + Math.max(0, state.player.level - BASE_LEVEL) * XP_PER_LEVEL;
-      state.player.maxHealth += 2;
-      state.player.health += 2;
+      state.player.maxHealth += 4;
+      state.player.health += 4;
       state.pendingLevelContinuation = continuation;
       state.pendingChoices = null;
       showLevelUpChoices();
@@ -4167,8 +4360,8 @@
         if (cancelLevelRewardIfDead()) {
           return;
         }
-        state.player.maxHealth += 5;
-        state.player.health += 5;
+        state.player.maxHealth += 4;
+        state.player.health += 4;
         writeKey("story.level_hp");
         continueAfterLevel();
       }),
@@ -4185,7 +4378,7 @@
         if (cancelLevelRewardIfDead()) {
           return;
         }
-        state.player.upgrades.damage += 1;
+        state.player.upgrades.damage += 2;
         writeKey("story.level_damage");
         continueAfterLevel();
       }),
@@ -4364,6 +4557,7 @@
     const achievementsUnlocked = Object.keys(state.stats._achievements).filter((key) => state.stats._achievements[key]).length;
     const scoreDetails = state.player ? scoreBreakdown(achievementsUnlocked) : { total: 0, lines: [] };
     write(`${t("story.game_over_header")}\n\n${t(`game_over.${reason}`)}\n\n${t("story.final_score", { score: scoreDetails.total })}\n\n${t("story.score_breakdown_heading")}\n${scoreDetails.lines.join("\n")}\n\n${t("story.game_over_footer")}`, true);
+    state.gameOverImage = GAME_OVER_IMAGES[reason] || null;
     state.showGameOverImage = true;
     setChoices([
       choice(ui.submitScore, submitScore),
@@ -4422,8 +4616,16 @@
       write(ui.scoreSubmitted);
       return;
     }
+    const confirmed = await confirmDialog(ui.submitScore, ui.submitScoreWarning, {
+      confirmLabel: ui.submitScore
+    });
+    if (!confirmed) {
+      return;
+    }
     const previousName = preferredLeaderboardName();
-    const playerName = window.prompt(ui.playerNamePrompt, previousName);
+    const playerName = await promptText(ui.playerNamePrompt, previousName, {
+      title: ui.submitScore
+    });
     if (!playerName) {
       return;
     }
@@ -5019,9 +5221,35 @@
     saveCloudData();
   }
 
-  function promptText(message, fallback) {
-    const value = window.prompt(message, fallback);
-    return value ? value.trim() : "";
+  function promptText(message, fallback = "", options = {}) {
+    return new Promise((resolve) => {
+      state.promptDialog = {
+        title: options.title || message,
+        body: options.body || "",
+        input: true,
+        password: Boolean(options.password),
+        value: fallback || "",
+        placeholder: options.placeholder || "",
+        confirmLabel: options.confirmLabel || ui.promptContinue,
+        cancelLabel: options.cancelLabel || ui.promptCancel,
+        resolve
+      };
+      render();
+    });
+  }
+
+  function confirmDialog(title, body, options = {}) {
+    return new Promise((resolve) => {
+      state.promptDialog = {
+        title,
+        body,
+        input: false,
+        confirmLabel: options.confirmLabel || ui.promptConfirm,
+        cancelLabel: options.cancelLabel || ui.promptCancel,
+        resolve
+      };
+      render();
+    });
   }
 
   function loadJson(key, fallback) {
