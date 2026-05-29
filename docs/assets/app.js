@@ -1329,19 +1329,31 @@
       },
       {
         question: "Como se calculan los puntajes?",
-        answer: "Tu puntaje suma nivel x 100, experiencia, peleas ganadas x 75, decisiones x 15, logros x 50, oro x 5, suministros x 10 y equipo x 10. Terminar una ruta suma 1000. Algunos objetos importantes dan bonificaciones: la muneca, el orbe de magistone y los mapas. Morir resta 200."
+        answer: "Tu puntaje suma nivel x 100, experiencia restante, peleas ganadas x 75, decisiones x 15 y logros x 50. Terminar una ruta suma 1000. Algunos objetos importantes dan bonificaciones: la muneca, el orbe de magistone, la mascara plateada y los mapas. Morir resta 200. Oro, suministros, pociones y equipo normal no suman puntaje."
       },
       {
         question: "Cuando puedo enviar un puntaje?",
-        answer: "Puedes enviar un puntaje desde Game Over o desde un final de capitulo. Cada partida guardada solo puede enviarse una vez."
+        answer: "Puedes enviar un puntaje desde Game Over o desde un final de capitulo. Cada partida guardada solo puede enviarse una vez, y enviar el puntaje sale de la pantalla actual; usa Cargar partida despues si quieres volver a esa sesion."
       },
       {
         question: "Que hacen los premios de nivel?",
-        answer: "Gain HP aumenta la vida maxima y actual. Gain AC hace que seas mas dificil de golpear. Gain Damage aumenta tu bono de dano. Full Heal restaura toda tu vida."
+        answer: "Cada nivel aumenta tu vida maxima. Gain HP aumenta aun mas tu vida maxima y actual. Gain AC hace que seas mas dificil de golpear. Gain Damage aumenta tu bono de dano. Full Heal restaura vida y mana. Los personajes personalizados tambien pueden ganar mana o subir un atributo."
       },
       {
         question: "Como funcionan las cuentas y guardados?",
-        answer: "Los invitados guardan en este navegador. Si inicias sesion, el juego tambien intenta guardar tus estadisticas y partida en la nube para usarlas despues."
+        answer: "Los invitados guardan en este navegador. Si inicias sesion con correo o Google, el juego tambien intenta guardar tus estadisticas, logros y partida en la nube para usarlas despues. La beta privada usa guardados y tablas separadas de la version live."
+      },
+      {
+        question: "Que hay de nuevo en la creacion de personaje?",
+        answer: "Ahora puedes elegir personajes predeterminados o crear uno personalizado. Los personajes personalizados eligen raza, clase, arma, atributos y habilidades con mana; el menu de estado muestra mana, arma, atributos y habilidades conocidas."
+      },
+      {
+        question: "Donde puedo revisar mi progreso?",
+        answer: "Usa Estado actual del juego en el menu para ver la version, sistemas disponibles, historia implementada y planes generales. Desarrollo de la trama muestra estadisticas, progreso de logros y el resumen del personaje."
+      },
+      {
+        question: "Como reporto errores o doy ideas?",
+        answer: "Usa Report Issue para abrir un reporte con detalles de version y sesion. En beta, Report Beta Issue incluye diagnosticos adicionales. El boton Discord abre la comunidad para comentarios rapidos."
       }
     ] : [
       {
@@ -1350,19 +1362,31 @@
       },
       {
         question: "How are leaderboard scores calculated?",
-        answer: "Your score adds level x 100, experience, fights won x 75, decisions x 15, and achievements x 50. Reaching an ending adds 1000. Key items can add bonuses too: the doll, magistone orb, and maps. Dying subtracts 200."
+        answer: "Your score adds level x 100, remaining experience, fights won x 75, decisions x 15, and achievements x 50. Reaching an ending adds 1000. Key items can add bonuses too: the doll, magistone orb, silver mask, and maps. Dying subtracts 200. Gold, supplies, potions, and ordinary gear do not add score."
       },
       {
         question: "When can I submit a score?",
-        answer: "You can submit from Game Over or from a chapter ending. Each saved run can only submit once."
+        answer: "You can submit from Game Over or from a chapter ending. Each saved run can only submit once, and submitting leaves the current run screen; use Load Game afterward if you want to return to that saved session."
       },
       {
         question: "What do level-up rewards do?",
-        answer: "Gain HP raises max HP and current HP. Gain AC makes you harder to hit. Gain Damage increases your damage bonus. Full Heal restores you to max HP."
+        answer: "Every level raises your max HP. Gain HP raises max HP and current HP even more. Gain AC makes you harder to hit. Gain Damage increases your damage bonus. Full Heal restores health and mana. Custom characters can also gain mana or raise an attribute."
       },
       {
         question: "How do accounts and saves work?",
-        answer: "Guests save in this browser. Signed-in players stay signed in unless they log out, and the game also tries to sync stats and saves to the cloud."
+        answer: "Guests save in this browser. Signed-in players using email or Google stay signed in unless they log out, and the game also tries to sync stats, achievements, and saves to the cloud. The private beta uses separate saves and leaderboard data from live."
+      },
+      {
+        question: "What changed with character creation?",
+        answer: "You can choose default characters or create a custom one. Custom characters pick race, class, weapon, attributes, and mana abilities; the status menu shows mana, weapon, attributes, and known abilities."
+      },
+      {
+        question: "Where can I check progress?",
+        answer: "Use Current game status in the menu to see the version, available systems, implemented story, and broad next-story notes. Plot Development shows stats, achievement progress, and character details."
+      },
+      {
+        question: "How do I report bugs or send ideas?",
+        answer: "Use Report Issue to open a report with version and session details. In beta, Report Beta Issue includes extra diagnostics. The Discord button opens the community for quick feedback."
       }
     ];
     return entries.map((entry) => `
