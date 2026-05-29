@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.8.16";
+  const VERSION = "0.8.23";
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
@@ -56,7 +56,8 @@
   };
   const GAME_OVER_IMAGES = {
     hydra: { file: "false_hydra.png", alt: "False hydra" },
-    false_hydra: { file: "obliviarch.png", alt: "Obliviarch" }
+    false_hydra: { file: "obliviarch.png", alt: "Obliviarch" },
+    mask_corruption: { file: "obliviarch.png", alt: "Obliviarch" }
   };
   const CHAPTER_MUSIC = {
     dmIntro: "epic",
@@ -560,7 +561,9 @@
     mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 },
     cultist: { name: "Masked Cultist", ac: 13, hp: 12, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
     ritualLeader: { name: "Cultist Leader", ac: 15, hp: 42, attackBonus: 7, damageDie: 10, damageBonus: 4, xp: 90 },
-    falseHydra: { name: "Obliviarch", ac: 19, hp: 350, attackBonus: 14, damageDie: 10, damageBonus: 8, xp: 155000 }
+    falseHydra: { name: "Obliviarch", ac: 19, hp: 350, attackBonus: 14, damageDie: 10, damageBonus: 8, xp: 155000 },
+    obliviarchPhaseOne: { name: "Obliviarch", ac: 17, hp: 140, attackBonus: 9, damageDie: 10, damageBonus: 6, xp: 175 },
+    obliviarchPhaseTwo: { name: "Wounded Obliviarch", ac: 16, hp: 95, attackBonus: 7, damageDie: 8, damageBonus: 5, xp: 250 }
   };
 
   const achievementsByLanguage = {
@@ -1809,6 +1812,12 @@
         hasSilverMask: false,
         wearingSilverMask: false,
         maskPowerClaimed: false,
+        playerSuccumbedToMask: false,
+        magistoneOrbSpent: false,
+        crownDestroyed: false,
+        dollDestroyed: false,
+        obliviarchDestroyed: false,
+        orderObservedPlayer: false,
         warehouseStage: "not_started",
         warehouseRested: false,
         bridgeEndMaskResolved: false,
@@ -1916,6 +1925,12 @@
       hasSilverMask: false,
       wearingSilverMask: false,
       maskPowerClaimed: false,
+      playerSuccumbedToMask: false,
+      magistoneOrbSpent: false,
+      crownDestroyed: false,
+      dollDestroyed: false,
+      obliviarchDestroyed: false,
+      orderObservedPlayer: false,
       warehouseStage: "not_started",
       warehouseRested: false,
       bridgeEndMaskResolved: false,
@@ -3916,26 +3931,144 @@
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.throne_room_crown_temptation");
     }
-    setChoices([choice(t("choice.approach_throne"), dollSummoning)]);
+    setChoices([choice(t("choice.approach_throne"), throneRoomApproach)]);
   }
 
-  function dollSummoning() {
+  function throneRoomApproach() {
+    if (state.player.flags.wearingSilverMask) {
+      maskCorruptionEnding();
+      return;
+    }
+    if (state.player.flags.hasSilverMask) {
+      throneRoomMaskTemptation();
+      return;
+    }
+    resistanceSummoning();
+  }
+
+  function throneRoomMaskTemptation() {
+    writeKey("story.throne_room_mask_temptation");
+    setChoices([
+      choice(t("choice.put_mask_on"), throneRoomPutOnMask),
+      choice(t("choice.resist_urge"), throneRoomResistMask)
+    ]);
+  }
+
+  function throneRoomPutOnMask() {
+    state.player.flags.wearingSilverMask = true;
+    state.player.flags.playerSuccumbedToMask = true;
+    applySilverMaskPower();
+    maskCorruptionEnding();
+  }
+
+  function throneRoomResistMask() {
+    writeKey("story.throne_room_resist_mask");
+    resistanceSummoning();
+  }
+
+  function maskCorruptionEnding() {
+    setMusic("mystery", { volume: MUSIC_VOLUMES.low });
+    state.player.flags.playerSuccumbedToMask = true;
+    state.player.flags.orderObservedPlayer = true;
+    state.player.flags.hasSilverMask = false;
+    state.player.flags.wearingSilverMask = false;
+    removeItem("silver mask");
+    writeKey("story.mask_corruption_release", { playerName: state.player.name });
+    writeKey("story.mask_corruption_courtyard");
+    writeKey("story.mask_corruption_order", { playerName: state.player.name });
+    state.player.gameOverReason = "mask_corruption";
+    state.player.health = 0;
+    gameOver();
+  }
+
+  function resistanceSummoning() {
     writeKey("story.doll_summoning");
-    setChoices([choice(t("choice.face_false_hydra"), falseHydraFinalBoss)]);
+    writeHtml(`<figure class="boss-reveal"><img src="${ASSET_BASE}/obliviarch.png" alt="Obliviarch"><figcaption>Obliviarch</figcaption></figure>`);
+    setChoices([choice(t("choice.face_false_hydra"), obliviarchPhaseOne)]);
   }
 
-  function falseHydraFinalBoss() {
-    writeHtml(`<figure class="boss-reveal"><img src="${ASSET_BASE}/obliviarch.png" alt="Obliviarch"><figcaption>Obliviarch</figcaption></figure>`);
-    startCombat(["falseHydra"], "story.false_hydra_final_win", {
+  function obliviarchPhaseOne() {
+    startCombat(["obliviarchPhaseOne"], "story.obliviarch_phase_one_win", {
       attackersPerRound: 1,
       deathReason: "false_hydra",
-      onWin: () => continueChapter("complete", true),
+      magistoneRescue: true,
+      onWin: obliviarchPhaseTwoIntro,
       onRun: () => {
         state.player.gameOverReason = "false_hydra";
         state.player.health = 0;
         gameOver();
       }
     });
+  }
+
+  function obliviarchPhaseTwoIntro() {
+    writeKey("story.obliviarch_phase_two_intro");
+    setChoices([choice(t("choice.face_obliviarch"), obliviarchPhaseTwo)]);
+  }
+
+  function obliviarchPhaseTwo() {
+    startCombat(["obliviarchPhaseTwo"], "story.obliviarch_phase_two_win", {
+      attackersPerRound: 1,
+      deathReason: "false_hydra",
+      onWin: finalStrikePrompt,
+      onRun: () => {
+        state.player.gameOverReason = "false_hydra";
+        state.player.health = 0;
+        gameOver();
+      }
+    });
+  }
+
+  function finalStrikePrompt() {
+    writeKey("story.obliviarch_final_strike_prompt");
+    setChoices([
+      choice(t("choice.attack_doll"), destroyObliviarch),
+      choice(t("choice.attack_crown"), finalStrikeWrongTarget),
+      choice(t("choice.attack_creature"), finalStrikeWrongTarget)
+    ]);
+  }
+
+  function finalStrikeWrongTarget() {
+    writeKey("story.obliviarch_final_wrong_target");
+    finalStrikePrompt();
+  }
+
+  function destroyObliviarch() {
+    state.player.flags.crownDestroyed = true;
+    state.player.flags.dollDestroyed = true;
+    state.player.flags.obliviarchDestroyed = true;
+    state.player.flags.hasDoll = false;
+    state.player.flags.dollInSack = false;
+    removeItem("cracked doll");
+    writeKey("story.obliviarch_destroyed");
+    orderEntersThroneRoom();
+  }
+
+  function orderEntersThroneRoom() {
+    state.player.flags.orderObservedPlayer = true;
+    writeKey("story.order_throne_room_arrival");
+    if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
+      state.player.flags.hasSilverMask = false;
+      removeItem("silver mask");
+      writeKey("story.order_destroys_stored_mask");
+    } else {
+      writeKey("story.order_no_mask_comment");
+    }
+    writeKey("story.order_cleanses_throne_room");
+    setChoices([choice(t("choice.leave_throne_room"), survivingRouteClosing)]);
+  }
+
+  function survivingRouteClosing() {
+    writeKey("story.surviving_route_closing");
+    recordEnding();
+    writeCurrentScore();
+    saveGame();
+    setChoices([
+      choice(ui.submitScore, submitScore),
+      choice(ui.leaderboard, showLeaderboard),
+      choice(t("choice.current_status"), currentGameStatus),
+      choice(t("choice.main_menu"), showStart)
+    ]);
   }
 
   function complete(clear = false) {
@@ -3968,6 +4101,7 @@
       onWin: options.onWin || null,
       onRun: options.onRun || null,
       deathReason: options.deathReason || "combat",
+      magistoneRescue: Boolean(options.magistoneRescue),
       guarding: false,
       playerEffects: {}
     };
@@ -4286,7 +4420,43 @@
         state.combat.playerEffects.rageTurns -= 1;
       }
     }
+    if (shouldTriggerMagistoneRescue()) {
+      triggerMagistoneRescue();
+      return;
+    }
     finishCombatDeath();
+  }
+
+  function shouldTriggerMagistoneRescue() {
+    if (!state.combat || !state.combat.magistoneRescue || !state.player || !state.player.flags) {
+      return false;
+    }
+    if (!state.player.flags.hasMagistoneOrb || state.player.flags.magistoneOrbSpent) {
+      return false;
+    }
+    return state.player.health <= 0 || state.player.health <= Math.ceil(state.player.maxHealth * 0.25);
+  }
+
+  function triggerMagistoneRescue() {
+    const enemy = state.combat.enemies.find((currentEnemy) => currentEnemy.hp > 0) || state.combat.enemies[0];
+    state.player.flags.magistoneOrbSpent = true;
+    removeItem("magistone orb");
+    state.player.health = state.player.maxHealth;
+    restoreBetaMana();
+    if (enemy) {
+      enemy.name = "Wounded Obliviarch";
+      enemy.ac = 16;
+      enemy.attackBonus = 7;
+      enemy.damageDie = 8;
+      enemy.damageBonus = 5;
+      enemy.hp = 50;
+      enemy.maxHp = Math.max(enemy.maxHp || 0, 95);
+    }
+    state.combat.victoryKey = "story.obliviarch_phase_two_win";
+    state.combat.onWin = finalStrikePrompt;
+    state.combat.magistoneRescue = false;
+    writeKey("story.magistone_orb_trigger");
+    showCombatChoices();
   }
 
   function finishCombatDeath() {
@@ -5145,6 +5315,24 @@
     }
     if (state.player.flags.maskCorruption === undefined) {
       state.player.flags.maskCorruption = 0;
+    }
+    if (state.player.flags.playerSuccumbedToMask === undefined) {
+      state.player.flags.playerSuccumbedToMask = false;
+    }
+    if (state.player.flags.magistoneOrbSpent === undefined) {
+      state.player.flags.magistoneOrbSpent = false;
+    }
+    if (state.player.flags.crownDestroyed === undefined) {
+      state.player.flags.crownDestroyed = false;
+    }
+    if (state.player.flags.dollDestroyed === undefined) {
+      state.player.flags.dollDestroyed = false;
+    }
+    if (state.player.flags.obliviarchDestroyed === undefined) {
+      state.player.flags.obliviarchDestroyed = false;
+    }
+    if (state.player.flags.orderObservedPlayer === undefined) {
+      state.player.flags.orderObservedPlayer = false;
     }
     if (!Array.isArray(state.player.flags.orderQuestionsAsked)) {
       state.player.flags.orderQuestionsAsked = [];
