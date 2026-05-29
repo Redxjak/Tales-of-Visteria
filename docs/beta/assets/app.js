@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.8.23";
+  const VERSION = "0.8.24";
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
@@ -268,7 +268,13 @@
     "choice.sneak_bridge": "Sneak Across the Bridge",
     "choice3.sneak_bridge": "Sneak Across the Bridge",
     "story.level_up_title": "Level up!",
-    "story.level_up_body": "+4 Health\nChoose your level up reward."
+    "story.level_up_body": "+4 Health\nChoose your level up reward.",
+    "story.level_up_body_beta": "+4 Health, +4 Mana\nChoose your level up reward.",
+    "choice.level_mana": "Gain Mana",
+    "choice.level_attribute": "Gain Attribute",
+    "story.level_mana": "Your maximum mana increases by another 4, and power returns to you.",
+    "story.level_attribute": "{attribute} increases to {value}.",
+    "story.level_attribute_unavailable": "Only custom beta characters can increase attributes."
   };
 
   const classes = {
@@ -523,16 +529,16 @@
 
   const betaPowers = {
     rage: { name: "Rage", cost: 3, type: "buff", turns: 3, text: "Rage burns through your muscles. For three turns, your attacks deal +2 damage." },
-    hunters_mark: { name: "Hunter's Mark", cost: 3, type: "attack", attackBonus: 2, damageBonus: 4, text: "You mark the weakest opening and strike with cruel precision." },
-    eldritch_bolt: { name: "Eldritch Bolt", cost: 2, type: "spell", damageDie: 10, attackBonus: 1, damageBonus: 2, text: "A violet bolt snaps from your focus." },
-    drain_life: { name: "Drain Life", cost: 5, type: "spell", damageDie: 8, attackBonus: 0, damageBonus: 2, healHalf: true, text: "You tear warmth out of the enemy and drag it into your lungs." },
-    second_wind: { name: "Second Wind", cost: 4, type: "heal", healDie: 10, healBonus: 8, text: "You grit your teeth, reset your stance, and pull yourself back together." },
+    hunters_mark: { name: "Hunter's Mark", cost: 4, type: "attack", attackBonus: 2, damageBonus: 3, text: "You mark the weakest opening and strike with cruel precision." },
+    eldritch_bolt: { name: "Eldritch Bolt", cost: 3, type: "spell", damageDie: 10, attackBonus: 1, damageBonus: 2, text: "A violet bolt snaps from your focus." },
+    drain_life: { name: "Drain Life", cost: 5, type: "spell", damageDie: 8, attackBonus: 0, damageBonus: 1, healHalf: true, text: "You tear warmth out of the enemy and drag it into your lungs." },
+    second_wind: { name: "Second Wind", cost: 4, type: "heal", healDie: 8, healBonus: 8, text: "You grit your teeth, reset your stance, and pull yourself back together." },
     stone_endurance: { name: "Stone Endurance", cost: 3, type: "guard", acBonus: 4, text: "Your skin hardens like cliff stone until the enemy turn ends." },
     elven_focus: { name: "Elven Focus", cost: 2, type: "attack", attackBonus: 3, damageBonus: 0, text: "Your breathing slows and the world narrows to one clean strike." },
     human_resolve: { name: "Human Resolve", cost: 2, type: "restore", manaRestore: 4, text: "You steady yourself and claw back a little power." },
     dwarven_guard: { name: "Dwarven Guard", cost: 2, type: "guard", acBonus: 3, text: "You lock your guard and dare the enemy to move you." },
     cleave: { name: "Cleave", cost: 3, type: "cleave", attackBonus: -1, damageBonus: 2, text: "You swing wide, trying to carry the blow into a second foe." },
-    pinning_shot: { name: "Pinning Shot", cost: 3, type: "attack", attackBonus: 2, damageBonus: 2, guard: true, text: "The shot pins the enemy's movement and buys you space." },
+    pinning_shot: { name: "Pinning Shot", cost: 4, type: "attack", attackBonus: 2, damageBonus: 1, guard: true, text: "The shot pins the enemy's movement and buys you space." },
     shield_bash: { name: "Shield Bash", cost: 2, type: "attack", damageDie: 6, attackBonus: 1, damageBonus: 1, guard: true, text: "You crash forward behind the shield." },
     hex_bolt: { name: "Hex Bolt", cost: 3, type: "spell", damageDie: 12, attackBonus: 1, damageBonus: 3, text: "The focus spits a black-edged curse." }
   };
@@ -975,7 +981,7 @@
       return;
     }
     document.getElementById("level-modal-title").textContent = t("story.level_up_title", { level: state.player.level });
-    document.getElementById("level-modal-body").textContent = t("story.level_up_body");
+    document.getElementById("level-modal-body").textContent = t(state.player && state.player.betaCustom ? "story.level_up_body_beta" : "story.level_up_body");
     const choiceArea = document.getElementById("level-modal-choices");
     choiceArea.innerHTML = "";
     state.levelRewardChoices.forEach((levelChoice) => {
@@ -4550,6 +4556,10 @@
       state.player.xpToNext = BASE_XP_TO_NEXT + Math.max(0, state.player.level - BASE_LEVEL) * XP_PER_LEVEL;
       state.player.maxHealth += 4;
       state.player.health += 4;
+      if (state.player.betaCustom) {
+        state.player.maxMana = (state.player.maxMana || 0) + 4;
+        state.player.mana = Math.min(state.player.maxMana, (state.player.mana || 0) + 4);
+      }
       state.pendingLevelContinuation = continuation;
       state.pendingChoices = null;
       showLevelUpChoices();
@@ -4565,7 +4575,7 @@
       return;
     }
     state.awaitingLevelReward = true;
-    state.levelRewardChoices = [
+    const levelChoices = [
       choice(t("choice.level_hp"), () => {
         if (cancelLevelRewardIfDead()) {
           return;
@@ -4574,7 +4584,26 @@
         state.player.health += 4;
         writeKey("story.level_hp");
         continueAfterLevel();
-      }),
+      })
+    ];
+    if (state.player.betaCustom) {
+      levelChoices.push(choice(t("choice.level_mana"), () => {
+        if (cancelLevelRewardIfDead()) {
+          return;
+        }
+        state.player.maxMana = (state.player.maxMana || 0) + 4;
+        state.player.mana = Math.min(state.player.maxMana, (state.player.mana || 0) + 4);
+        writeKey("story.level_mana");
+        continueAfterLevel();
+      }));
+      levelChoices.push(choice(t("choice.level_attribute"), () => {
+        if (cancelLevelRewardIfDead()) {
+          return;
+        }
+        showAttributeLevelChoices();
+      }));
+    }
+    levelChoices.push(
       choice(t("choice.level_ac"), () => {
         if (cancelLevelRewardIfDead()) {
           return;
@@ -4601,8 +4630,45 @@
         writeKey("story.level_heal");
         continueAfterLevel();
       })
-    ];
+    );
+    state.levelRewardChoices = levelChoices;
     render();
+  }
+
+  function showAttributeLevelChoices() {
+    if (!state.player || !state.player.betaCustom) {
+      writeKey("story.level_attribute_unavailable");
+      continueAfterLevel();
+      return;
+    }
+    state.awaitingLevelReward = true;
+    state.levelRewardChoices = BETA_ATTRIBUTES.map((attribute) => {
+      const label = t(`choice.level_attribute_${attribute}`);
+      const current = (state.player.attributes && state.player.attributes[attribute]) || 10;
+      return choice(label, () => increaseLevelAttribute(attribute), {
+        detail: `${label}: ${current} -> ${current + 1}`
+      });
+    });
+    render();
+  }
+
+  function increaseLevelAttribute(attribute) {
+    if (cancelLevelRewardIfDead()) {
+      return;
+    }
+    if (!state.player.attributes) {
+      state.player.attributes = {};
+    }
+    state.player.attributes[attribute] = (state.player.attributes[attribute] || 10) + 1;
+    if (attribute === "con") {
+      state.player.maxHealth += 3;
+      state.player.health += 3;
+    }
+    writeKey("story.level_attribute", {
+      attribute: t(`attribute.${attribute}`),
+      value: state.player.attributes[attribute]
+    });
+    continueAfterLevel();
   }
 
   function continueAfterLevel() {
@@ -4673,7 +4739,23 @@
   }
 
   function rollDie(sides) {
-    return Math.floor(Math.random() * sides) + 1;
+    return randomInt(sides) + 1;
+  }
+
+  function randomInt(maxExclusive) {
+    if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) {
+      return 0;
+    }
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+      const maxUint = 0x100000000;
+      const limit = maxUint - (maxUint % maxExclusive);
+      const values = new Uint32Array(1);
+      do {
+        window.crypto.getRandomValues(values);
+      } while (values[0] >= limit);
+      return values[0] % maxExclusive;
+    }
+    return Math.floor(Math.random() * maxExclusive);
   }
 
   function damageRollText(damageDie, damageRoll, damageBonus, critDamageRoll) {
