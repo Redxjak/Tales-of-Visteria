@@ -1410,7 +1410,7 @@
 
   function showCharacterSelect() {
     if (IS_BETA) {
-      showBetaCharacterName();
+      showBetaCharacterSelect();
       return;
     }
     setMusic("ambient");
@@ -1421,6 +1421,30 @@
     });
     write(lines.join("\n"), true);
     setChoices([
+      choice("Cletus", () => newPlayer("warrior")),
+      choice("Ren", () => newPlayer("ranger")),
+      choice("Cal", () => newPlayer("scholar")),
+      choice("Kili", () => newPlayer("dwarf")),
+      choice("Jon the DM", () => newPlayer("dm")),
+      choice(t("choice.back"), showStart)
+    ]);
+  }
+
+  function showBetaCharacterSelect() {
+    setMusic("ambient");
+    write([
+      "Choose Your Character",
+      "",
+      "Pick one of the default characters, or create a custom beta character.",
+      "",
+      "Cletus the Barbarian: A Goliath Barbarian with high health and brutal melee attacks.",
+      "Ren the Ranger: An Elven Ranger with high accuracy and two attacks.",
+      "Cal the Warlock: A Human Warlock with eldritch power and strong persuasion.",
+      "Kili the Fighter: A Dwarven Fighter with sturdy defenses and practical lore.",
+      "Jon the DM: A behind-the-screen chaos option."
+    ].join("\n"), true);
+    setChoices([
+      choice("Create Custom Character", showBetaCharacterName),
       choice("Cletus", () => newPlayer("warrior")),
       choice("Ren", () => newPlayer("ranger")),
       choice("Cal", () => newPlayer("scholar")),
@@ -1441,29 +1465,32 @@
     state.betaCreator = {
       name: name.slice(0, 32)
     };
-    showBetaClassSelect();
+    showBetaRaceSelect();
   }
 
   function showBetaStatRolls() {
     const creator = state.betaCreator;
-    if (!creator || !creator.characterClass) {
+    if (!creator || !creator.race || !creator.characterClass) {
       showBetaCharacterName();
       return;
     }
     const build = betaClassBuilds[creator.characterClass];
+    const race = betaRaces[creator.race];
     if (!creator.rolls) {
       creator.rolls = rollBetaStatArray();
     }
     creator.assignedStats = assignBetaStats(creator.rolls, build.priority);
+    const finalAttributes = betaFinalAttributes(creator.assignedStats, race);
     write([
       "Beta Character Creation",
       "",
       `Name: ${creator.name}`,
+      `Race: ${race.name}`,
       `Class: ${build.title}`,
-      "Assigned Stats:",
-      betaAttributeList(creator.assignedStats),
+      "Final Stats:",
+      betaAttributeList(finalAttributes),
       "",
-      "Stats are rolled as 4d6 drop lowest and auto-assigned to this class's best attributes."
+      "Stats are rolled as 4d6 drop lowest, auto-assigned to this class's best attributes, then adjusted by race."
     ].join("\n"), true);
     setChoices([
       choice("Keep These Stats", showBetaRaceSelect),
@@ -1477,14 +1504,16 @@
 
   function showBetaClassSelect() {
     const creator = state.betaCreator;
-    if (!creator) {
+    if (!creator || !creator.race) {
       showBetaCharacterName();
       return;
     }
+    const race = betaRaces[creator.race];
     write([
       "Choose a Class",
       "",
       `Name: ${creator.name}`,
+      `Race: ${race.name}`,
       "",
       ...Object.keys(betaClassBuilds).map((key) => {
         const build = betaClassBuilds[key];
@@ -1496,7 +1525,7 @@
       choice("Ranger", () => chooseBetaClass("ranger")),
       choice("Warlock", () => chooseBetaClass("scholar")),
       choice("Fighter", () => chooseBetaClass("dwarf")),
-      choice(t("choice.back"), showBetaCharacterName)
+      choice(t("choice.back"), showBetaRaceSelect)
     ]);
   }
 
@@ -1508,8 +1537,15 @@
   }
 
   function showBetaRaceSelect() {
+    const creator = state.betaCreator;
+    if (!creator) {
+      showBetaCharacterName();
+      return;
+    }
     write([
       "Choose a Race",
+      "",
+      `Name: ${creator.name}`,
       "",
       ...Object.values(betaRaces).map((race) => `${race.name}: ${race.description}`)
     ].join("\n\n"), true);
@@ -1518,13 +1554,13 @@
       choice("Elf", () => chooseBetaRace("elf")),
       choice("Human", () => chooseBetaRace("human")),
       choice("Dwarf", () => chooseBetaRace("dwarf")),
-      choice(t("choice.back"), showBetaClassSelect)
+      choice(t("choice.back"), showBetaCharacterName)
     ]);
   }
 
   function chooseBetaRace(race) {
     state.betaCreator.race = race;
-    showBetaWeaponSelect();
+    showBetaClassSelect();
   }
 
   function showBetaWeaponSelect() {
@@ -1545,13 +1581,14 @@
       choice("Longbow", () => newBetaPlayer("longbow")),
       choice("Battleaxe and Shield", () => newBetaPlayer("battleaxe")),
       choice("Eldritch Focus", () => newBetaPlayer("eldritch_focus")),
-      choice(t("choice.back"), showBetaRaceSelect)
+      choice(t("choice.back"), showBetaStatRolls)
     ]);
   }
 
   function newPlayer(characterClass) {
     const template = classes[characterClass];
     state.player = {
+      schemaVersion: IS_BETA ? BETA_CHARACTER_SCHEMA_VERSION : undefined,
       class: characterClass,
       name: template.name,
       title: template.title,
