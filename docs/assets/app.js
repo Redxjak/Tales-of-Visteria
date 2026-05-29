@@ -1331,7 +1331,7 @@
   }
 
   function dmBarracksMap() {
-    writeKey("story.dm_barracks_map");
+    writeKey("story.dm_barracks_map", { directions: bridgeDirectionList() });
     setChoices([choice(t("choice.move_houses"), dmResidential)]);
   }
 
@@ -1371,7 +1371,7 @@
   }
 
   function dmMerchantMap() {
-    writeKey("story.dm_merchant_map");
+    writeKey("story.dm_merchant_map", { directions: bridgeDirectionList() });
     setChoices([choice(t("choice.move_houses"), dmResidential)]);
   }
 
@@ -1424,7 +1424,7 @@
 
   function dmBridge() {
     setMusic("mystery");
-    writeKey("story.dm_bridge");
+    writeKey("story.dm_bridge", { directions: bridgeDirectionList() });
     setChoices([
       choice(t("choice.dm_watch_sneak"), dmBridgeSneak),
       choice(t("choice.dm_skip_warehouse"), dmWarehouse)
@@ -1954,14 +1954,27 @@
   }
 
   function randomBridgeRoute() {
-    return [...BRIDGE_DIRECTIONS];
+    const route = [...BRIDGE_DIRECTIONS];
+    for (let i = route.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [route[i], route[j]] = [route[j], route[i]];
+    }
+    return route;
+  }
+
+  function isValidBridgeRoute(route) {
+    if (!Array.isArray(route) || route.length !== BRIDGE_DIRECTIONS.length) {
+      return false;
+    }
+    const expected = [...BRIDGE_DIRECTIONS].sort().join("|");
+    return [...route].sort().join("|") === expected;
   }
 
   function bridgeRoute() {
     if (!state.player.flags) {
       state.player.flags = {};
     }
-    if (!Array.isArray(state.player.flags.bridgeRoute) || state.player.flags.bridgeRoute.join("|") !== BRIDGE_DIRECTIONS.join("|")) {
+    if (!isValidBridgeRoute(state.player.flags.bridgeRoute)) {
       state.player.flags.bridgeRoute = randomBridgeRoute();
     }
     return state.player.flags.bridgeRoute;
@@ -4035,7 +4048,7 @@
     if (state.player.flags.smallShackCleared === undefined) {
       state.player.flags.smallShackCleared = false;
     }
-    if (!Array.isArray(state.player.flags.bridgeRoute) || state.player.flags.bridgeRoute.join("|") !== BRIDGE_DIRECTIONS.join("|")) {
+    if (!isValidBridgeRoute(state.player.flags.bridgeRoute)) {
       state.player.flags.bridgeRoute = randomBridgeRoute();
     }
     if (state.player.flags.bridgeNavigationStep === undefined) {
