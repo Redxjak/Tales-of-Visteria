@@ -434,6 +434,7 @@
   const betaRaces = {
     goliath: {
       name: "Goliath",
+      image: "race_goliath.png",
       bonuses: { str: 2, con: 1 },
       maxHealth: 4,
       ability: "stone_endurance",
@@ -441,6 +442,7 @@
     },
     elf: {
       name: "Elf",
+      image: "race_elf.png",
       bonuses: { dex: 2, wis: 1 },
       attackBonus: 1,
       ability: "elven_focus",
@@ -448,6 +450,7 @@
     },
     human: {
       name: "Human",
+      image: "race_human.png",
       bonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
       mana: 2,
       ability: "human_resolve",
@@ -455,6 +458,7 @@
     },
     dwarf: {
       name: "Dwarf",
+      image: "race_dwarf.png",
       bonuses: { con: 2, str: 1 },
       ac: 1,
       ability: "dwarven_guard",
@@ -1522,17 +1526,7 @@
       return;
     }
     const race = betaRaces[creator.race];
-    write([
-      "Choose a Class",
-      "",
-      `Name: ${creator.name}`,
-      `Race: ${race.name}`,
-      "",
-      ...Object.keys(betaClassBuilds).map((key) => {
-        const build = betaClassBuilds[key];
-        return `${build.title}: ${build.description}`;
-      })
-    ].join("\n\n"), true);
+    writeHtml(classSelectionHtml(creator, race), true);
     setChoices([
       choice("Barbarian", () => chooseBetaClass("warrior")),
       choice("Ranger", () => chooseBetaClass("ranger")),
@@ -1540,6 +1534,34 @@
       choice("Fighter", () => chooseBetaClass("dwarf")),
       choice(t("choice.back"), showBetaRaceSelect)
     ]);
+  }
+
+  function classSelectionHtml(creator, race) {
+    const cards = ["warrior", "ranger", "scholar", "dwarf"].map((key) => {
+      const build = betaClassBuilds[key];
+      return `
+        <article class="class-card">
+          <img src="${ASSET_BASE}/${betaClassImageFile(creator.race, key)}" alt="${escapeHtml(`${race.name} ${build.title}`)}">
+          <div class="class-card-body">
+            <h3>${escapeHtml(build.title)}</h3>
+            <p>${escapeHtml(build.description)}</p>
+          </div>
+        </article>
+      `;
+    }).join("");
+    return `
+      <section class="class-selection">
+        <h2>Choose a Class</h2>
+        <p>Name: ${escapeHtml(creator.name)}</p>
+        <p>Race: ${escapeHtml(race.name)}</p>
+        <div class="class-card-grid">${cards}</div>
+      </section>
+    `;
+  }
+
+  function betaClassImageFile(raceKey, classKey) {
+    const classSlug = betaClassBuilds[classKey].title.toLowerCase();
+    return `class_${raceKey}_${classSlug}.png`;
   }
 
   function chooseBetaClass(characterClass) {
@@ -1555,13 +1577,7 @@
       showBetaCharacterName();
       return;
     }
-    write([
-      "Choose a Race",
-      "",
-      `Name: ${creator.name}`,
-      "",
-      ...Object.values(betaRaces).map((race) => `${race.name}: ${race.description}`)
-    ].join("\n\n"), true);
+    writeHtml(raceSelectionHtml(creator), true);
     setChoices([
       choice("Goliath", () => chooseBetaRace("goliath")),
       choice("Elf", () => chooseBetaRace("elf")),
@@ -1569,6 +1585,28 @@
       choice("Dwarf", () => chooseBetaRace("dwarf")),
       choice(t("choice.back"), showBetaCharacterName)
     ]);
+  }
+
+  function raceSelectionHtml(creator) {
+    const cards = ["goliath", "elf", "human", "dwarf"].map((key) => {
+      const race = betaRaces[key];
+      return `
+        <article class="race-card">
+          <img src="${ASSET_BASE}/${race.image}" alt="${escapeHtml(race.name)}">
+          <div class="race-card-body">
+            <h3>${escapeHtml(race.name)}</h3>
+            <p>${escapeHtml(race.description)}</p>
+          </div>
+        </article>
+      `;
+    }).join("");
+    return `
+      <section class="race-selection">
+        <h2>Choose a Race</h2>
+        <p>Name: ${escapeHtml(creator.name)}</p>
+        <div class="race-card-grid">${cards}</div>
+      </section>
+    `;
   }
 
   function chooseBetaRace(race) {

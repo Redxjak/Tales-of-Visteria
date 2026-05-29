@@ -403,6 +403,76 @@ select {
   border: 1px solid #4d3c2a;
 }
 
+.race-selection h2,
+.class-selection h2 {
+  margin: 0 0 10px;
+  color: #d7b16d;
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.race-selection p,
+.class-selection p {
+  margin: 0 0 18px;
+}
+
+.race-card-grid,
+.class-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.race-card,
+.class-card {
+  overflow: hidden;
+  border: 1px solid #4d3c2a;
+  background: #11100f;
+}
+
+.race-card img,
+.class-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: top center;
+  border-bottom: 1px solid #4d3c2a;
+}
+
+.race-card-body,
+.class-card-body {
+  padding: 12px;
+}
+
+.race-card h3,
+.class-card h3 {
+  margin: 0 0 6px;
+  color: #d7b16d;
+  font-size: 20px;
+}
+
+.race-card p,
+.class-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.race-card .race-card-ability,
+.class-card .class-card-ability {
+  margin-top: 8px;
+  color: var(--text);
+}
+
+.race-attribute-help {
+  margin: 16px 0 0;
+  white-space: pre-wrap;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+}
+
 .embedded-log,
 .faq-panel {
   margin: 0 clamp(12px, 2vw, 28px) 14px;
