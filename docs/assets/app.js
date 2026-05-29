@@ -2,21 +2,49 @@
   "use strict";
 
   const VERSION = "0.8.16";
+  const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
+  const IS_BETA = APP_CHANNEL === "beta";
+  const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
   const XP_PER_LEVEL = 50;
   const SUPABASE_URL = "https://fojkijwketpzxsbikmsl.supabase.co";
   const SUPABASE_KEY = "sb_publishable_pxMr-7kXAoQ9gz0mTTWLew_FAIRtAio";
-  const LEADERBOARD_TABLE = "leaderboard_scores";
+  const CHANNEL_CONFIG = {
+    live: {
+      storagePrefix: "tov.web.",
+      leaderboardTable: "leaderboard_scores",
+      profileTable: "user_profiles",
+      gameDataTable: "user_game_data",
+      allowGuests: true,
+      allowlistTable: "",
+      reportLabel: "issue"
+    },
+    beta: {
+      storagePrefix: "tov.beta.",
+      leaderboardTable: "beta_leaderboard_scores",
+      profileTable: "beta_user_profiles",
+      gameDataTable: "beta_user_game_data",
+      allowGuests: false,
+      allowlistTable: "beta_tester_allowlist",
+      reportLabel: "beta"
+    }
+  };
+  const appConfig = CHANNEL_CONFIG[APP_CHANNEL];
+  const LEADERBOARD_TABLE = appConfig.leaderboardTable;
+  const PROFILE_TABLE = appConfig.profileTable;
+  const GAME_DATA_TABLE = appConfig.gameDataTable;
+  const BETA_ALLOWLIST_TABLE = appConfig.allowlistTable;
   const DISCORD_URL = "https://discord.gg/9C4npSfNQd";
   const SUGGESTION_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new?template=suggestion.yml";
   const ISSUE_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new?template=issue.yml";
+  const BETA_REPORT_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new";
   const MUSIC_TRACKS = {
-    epic: "../assets/audio/fantasy_medieval_epic_music.mp3",
-    ambient: "../assets/audio/fantasy_medieval_ambient.mp3",
-    mystery: "../assets/audio/fantasy_medieval_mystery_ambient.mp3",
-    combat: "../assets/audio/medieval_epic.mp3"
+    epic: `${ASSET_BASE}/audio/fantasy_medieval_epic_music.mp3`,
+    ambient: `${ASSET_BASE}/audio/fantasy_medieval_ambient.mp3`,
+    mystery: `${ASSET_BASE}/audio/fantasy_medieval_mystery_ambient.mp3`,
+    combat: `${ASSET_BASE}/audio/medieval_epic.mp3`
   };
   const MUSIC_VOLUMES = {
     normal: 0.42,
@@ -65,11 +93,11 @@
   ];
   const PIXABAY_LICENSE_URL = "https://pixabay.com/service/license-summary/";
   const lang = document.body.dataset.language || "en";
-  const storagePrefix = "tov.web.";
+  const storagePrefix = appConfig.storagePrefix;
   const uiTextByLanguage = {
     en: {
       english: "English",
-      spanish: "Español",
+      spanish: "Espa?ol",
       language: "Language",
       characterSheet: "Character Sheet",
       plotDevelopment: "Plot Development",
@@ -127,6 +155,14 @@
       discord: "Discord",
       suggest: "Suggest",
       reportIssue: "Report Issue",
+      betaReportIssue: "Report Beta Issue",
+      betaBadge: "BETA",
+      betaLoginScreen: "Private beta access requires an approved tester account. Sign in with an allowlisted email to continue.",
+      betaAccessChecking: "Checking beta tester access...",
+      betaAccessDenied: "This account is not on the beta tester list yet. Ask the developer to add your tester email, then sign in again.",
+      betaAccessGranted: "Beta access confirmed.",
+      betaGuestBlocked: "Guest play is disabled in the private beta. Please sign in with an approved tester account.",
+      betaWarning: "Private beta build. Saves, stats, and leaderboard entries are separate from the live game.",
       log: "Log",
       closeLog: "Close",
       emptyLog: "No story log yet.",
@@ -136,7 +172,7 @@
     },
     es: {
       english: "English",
-      spanish: "Español",
+      spanish: "Espa?ol",
       language: "Idioma",
       characterSheet: "Hoja de personaje",
       plotDevelopment: "Desarrollo de la trama",
@@ -151,20 +187,20 @@
       hp: "PV",
       ac: "CA",
       attackBonus: "Bonif. prob. ataque",
-      damage: "Daño",
+      damage: "Da?o",
       equipment: "Equipo",
       enemyHp: "PV enemigos",
-      leaderboard: "Clasificación",
+      leaderboard: "Clasificaci?n",
       submitScore: "Enviar puntaje",
-      playerNamePrompt: "Nombre para la clasificación:",
+      playerNamePrompt: "Nombre para la clasificaci?n:",
       scoreSubmitted: "Puntaje enviado.",
-      scoreSubmitFailed: "No se pudo enviar el puntaje. Tal vez falte crear la tabla de clasificación.",
+      scoreSubmitFailed: "No se pudo enviar el puntaje. Tal vez falte crear la tabla de clasificaci?n.",
       deathScorePrompt: "Has muerto. Haz clic aqui para ver tus puntajes",
-      leaderboardLoading: "Cargando clasificación...",
-      leaderboardEmpty: "Todavía no hay puntajes.",
-      leaderboardFailed: "No se pudo cargar la clasificación.",
-      leaderboardHeader: "Clasificación",
-      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento.",
+      leaderboardLoading: "Cargando clasificaci?n...",
+      leaderboardEmpty: "Todav?a no hay puntajes.",
+      leaderboardFailed: "No se pudo cargar la clasificaci?n.",
+      leaderboardHeader: "Clasificaci?n",
+      leaderboardWarning: "Aviso: la clasificaci?n se reiniciar? con el lanzamiento de la versi?n 1.0. Se har? una menci?n especial para los tres mejores jugadores en ese momento.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       loginScreen: "Inicia sesion, crea una cuenta o juega como invitado",
       displayNamePrompt: "Elige un nombre publico:",
@@ -194,6 +230,14 @@
       discord: "Discord",
       suggest: "Sugerir",
       reportIssue: "Reportar problema",
+      betaReportIssue: "Reportar error beta",
+      betaBadge: "BETA",
+      betaLoginScreen: "El acceso a la beta privada requiere una cuenta de tester aprobada. Inicia sesion con un correo permitido para continuar.",
+      betaAccessChecking: "Comprobando acceso de tester beta...",
+      betaAccessDenied: "Esta cuenta todavia no esta en la lista de testers beta. Pide al desarrollador que agregue tu correo y vuelve a iniciar sesion.",
+      betaAccessGranted: "Acceso beta confirmado.",
+      betaGuestBlocked: "El juego como invitado esta desactivado en la beta privada. Inicia sesion con una cuenta de tester aprobada.",
+      betaWarning: "Version beta privada. Los guardados, estadisticas y puntajes estan separados del juego en vivo.",
       log: "Registro",
       closeLog: "Cerrar",
       emptyLog: "Todavia no hay registro.",
@@ -297,19 +341,19 @@
   const classTranslations = {
     es: {
       warrior: {
-        title: "Bárbaro",
+        title: "B?rbaro",
         race: "Goliat",
-        description: "Un Bárbaro goliat con mucha salud y ataques cuerpo a cuerpo brutales."
+        description: "Un B?rbaro goliat con mucha salud y ataques cuerpo a cuerpo brutales."
       },
       ranger: {
         title: "Explorador",
         race: "Elfo",
-        description: "Un Explorador élfico con gran precisión y dos ataques."
+        description: "Un Explorador ?lfico con gran precisi?n y dos ataques."
       },
       scholar: {
         title: "Brujo",
         race: "Humano",
-        description: "Un Brujo humano con poder eldritch y buena persuasión."
+        description: "Un Brujo humano con poder eldritch y buena persuasi?n."
       },
       dwarf: {
         title: "Guerrero",
@@ -381,24 +425,24 @@
       unlucky: "Sin suerte",
       forest_mind_break: "Aturdido y confundido",
       ghost_slayer: "Cazafantasmas",
-      ghost_kiss: "No es tu gótica",
+      ghost_kiss: "No es tu g?tica",
       pyromaniac: "Piromano",
       send_hydra: "Al diablo con ellos",
       correct_chest_key: "La llave correcta",
       mimic_nap: "Duerme bien",
       played_everyone: "Grupo completo",
-      mask_on: "¡Me siento bien!",
-      warehouse_survived: "¿Fue un sueño?",
+      mask_on: "?Me siento bien!",
+      warehouse_survived: "?Fue un sue?o?",
       bridge_cleared: "Puente superado",
       high_ac: "No puedes tocar esto",
       big_damage: "Powa ilimitado",
-      maxed_out: "Al máximo",
-      all_day: "Puedo hacer esto todo el día",
+      maxed_out: "Al m?ximo",
+      all_day: "Puedo hacer esto todo el d?a",
       map_goblin: "Goblin de mapas",
-      wrong_turn_right_lesson: "Giro equivocado, lección correcta",
+      wrong_turn_right_lesson: "Giro equivocado, lecci?n correcta",
       haunted_carry_on: "Equipaje encantado",
-      this_is_mine_now: "Esto ahora es mío",
-      union_violation: "Violación sindical",
+      this_is_mine_now: "Esto ahora es m?o",
+      union_violation: "Violaci?n sindical",
       aggressively_educational: "Agresivamente educativo",
       free_wazetax: "Liberen a Wazetax",
       no_one_left_in_cage: "Nadie queda en una jaula",
@@ -431,9 +475,9 @@
       caravan_run: "escapaste de la caravana",
       forest_attempt: "probaste el camino del bosque",
       choose_cave: "elegiste la cueva",
-      go_deeper: "avanzaste más profundo en Visteria",
-      ghost_choice: "enfrentaste a la niña fantasma",
-      doll_choice: "decidiste qué hacer con la muñeca",
+      go_deeper: "avanzaste m?s profundo en Visteria",
+      ghost_choice: "enfrentaste a la ni?a fantasma",
+      doll_choice: "decidiste qu? hacer con la mu?eca",
       district_choice: "elegiste una ruta de distrito",
       search: "buscaste suministros",
       residential_choice: "exploraste el distrito residencial",
@@ -472,6 +516,8 @@
     pendingLevelContinuation: null,
     activeMobilePanel: null,
     oauthLoginFailed: false,
+    betaAccessChecked: false,
+    betaAccessAllowed: false,
     account: loadAccount(),
     leaderboard: [],
     music: {
@@ -489,19 +535,21 @@
 
   async function init() {
     try {
-      const response = await fetch(`../assets/data/${lang}.json`);
+      const response = await fetch(`${ASSET_BASE}/data/${lang}.json`);
       state.text = await response.json();
     } catch {
-      const fallback = await fetch("../assets/data/en.json");
+      const fallback = await fetch(`${ASSET_BASE}/data/en.json`);
       state.text = await fallback.json();
     }
     await handleOAuthRedirect();
     if (state.account && !state.account.guest) {
       await refreshAccountSession();
-      await loadCloudData();
+      if (await ensureBetaAccess({ silent: true })) {
+        await loadCloudData();
+      }
     }
     drawShell();
-    if (state.account) {
+    if (state.account && canEnterGame()) {
       showStart();
     } else {
       showLoginScreen();
@@ -515,8 +563,8 @@
     app.innerHTML = `
       <header class="topbar">
         <div class="title-row">
-          <img class="game-logo" src="../assets/tales-of-visteria-logo.png" alt="Tales of Visteria">
-          <span class="version">v${VERSION}</span>
+          <img class="game-logo" src="${ASSET_BASE}/tales-of-visteria-logo.png" alt="Tales of Visteria">
+          <span class="version">v${VERSION}${IS_BETA ? ` ${ui.betaBadge}` : ""}</span>
         </div>
         <div class="meta-row">
           <details id="account-menu" class="account-menu">
@@ -675,7 +723,7 @@
       const img = document.createElement("img");
       img.className = "game-over-image";
       img.alt = "Tales of Visteria party";
-      img.src = "../assets/game_over_party.png";
+      img.src = `${ASSET_BASE}/game_over_party.png`;
       document.getElementById("story").appendChild(img);
     }
     document.getElementById("status").textContent = statusText();
@@ -955,7 +1003,44 @@
   }
 
   function openIssueForm() {
+    if (IS_BETA) {
+      openExternal(betaReportUrl());
+      return;
+    }
     openExternal(ISSUE_URL);
+  }
+
+  function betaReportUrl() {
+    const params = new URLSearchParams({
+      title: `[Beta ${VERSION}] `,
+      labels: appConfig.reportLabel,
+      body: betaReportBody()
+    });
+    return `${BETA_REPORT_URL}?${params.toString()}`;
+  }
+
+  function betaReportBody() {
+    const account = state.account || {};
+    const player = state.player || {};
+    const lines = [
+      "## What happened?",
+      "",
+      "",
+      "## What did you expect?",
+      "",
+      "",
+      "## Beta diagnostics",
+      `Version: ${VERSION}`,
+      `Channel: ${APP_CHANNEL}`,
+      `Language: ${lang}`,
+      `URL: ${window.location.href.split("#")[0]}`,
+      `Tester: ${account.email || account.name || "unknown"}`,
+      `Character: ${player.name ? `${player.name} the ${player.title}` : "none"}`,
+      `Chapter: ${player.chapter || "none"}`,
+      `Route: ${state.player ? scoreRoute() : "none"}`,
+      `Browser: ${navigator.userAgent}`
+    ];
+    return lines.join("\n");
   }
 
   function openExternal(url) {
@@ -1040,15 +1125,20 @@
   }
 
   function showStart() {
+    if (!canEnterGame()) {
+      showLoginScreen();
+      return;
+    }
     setMusic("epic");
     const stats = plotText();
-    write(t("story.start", { stats }), true);
+    const intro = IS_BETA ? `${ui.betaWarning}\n\n${t("story.start", { stats })}` : t("story.start", { stats });
+    write(intro, true);
     const choices = [
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.load_game"), loadGame),
       choice(ui.leaderboard, showLeaderboard),
       choice(ui.suggest, openSuggestionForm),
-      choice(ui.reportIssue, openIssueForm)
+      choice(IS_BETA ? ui.betaReportIssue : ui.reportIssue, openIssueForm)
     ];
     setChoices(choices);
   }
@@ -1056,13 +1146,16 @@
   function showLoginScreen() {
     setMusic("epic", { volume: MUSIC_VOLUMES.low });
     state.player = null;
-    write(ui.loginScreen, true);
-    setChoices([
+    write(IS_BETA ? ui.betaLoginScreen : ui.loginScreen, true);
+    const choices = [
       choice(ui.login, signIn),
       choice(ui.googleLogin, signInWithGoogle),
-      choice(ui.createAccount, createAccount),
-      choice(ui.playAsGuest, playAsGuest)
-    ]);
+      choice(ui.createAccount, createAccount)
+    ];
+    if (appConfig.allowGuests) {
+      choices.push(choice(ui.playAsGuest, playAsGuest));
+    }
+    setChoices(choices);
   }
 
   async function signIn() {
@@ -1080,8 +1173,10 @@
         password
       });
       setAuthenticatedAccount(session);
-      await loadCloudData();
-      showStart();
+      if (await ensureBetaAccess()) {
+        await loadCloudData();
+        showStart();
+      }
     } catch {
       writeLoginFailed();
     }
@@ -1108,9 +1203,11 @@
       });
       if (session.access_token) {
         setAuthenticatedAccount(session, displayName);
-        await saveProfile();
-        await saveCloudData();
-        showStart();
+        if (await ensureBetaAccess()) {
+          await saveProfile();
+          await saveCloudData();
+          showStart();
+        }
       } else {
         state.account = {
           name: displayName.trim().slice(0, 32),
@@ -1121,10 +1218,11 @@
         localStorage.setItem(`${storagePrefix}account`, JSON.stringify(state.account));
         localStorage.setItem(`${storagePrefix}leaderboardName`, state.account.name);
         write(ui.accountCreated, true);
-        setChoices([
-          choice(ui.login, signIn),
-          choice(ui.playAsGuest, playAsGuest)
-        ]);
+        const choices = [choice(ui.login, signIn)];
+        if (appConfig.allowGuests) {
+          choices.push(choice(ui.playAsGuest, playAsGuest));
+        }
+        setChoices(choices);
       }
     } catch {
       write(ui.signupFailed);
@@ -1141,6 +1239,10 @@
   }
 
   function playAsGuest() {
+    if (!appConfig.allowGuests) {
+      write(ui.betaGuestBlocked);
+      return;
+    }
     state.account = { name: ui.guest, guest: true };
     localStorage.removeItem(`${storagePrefix}account`);
     showStart();
@@ -1151,12 +1253,15 @@
     state.player = null;
     localStorage.removeItem(`${storagePrefix}account`);
     write(ui.logoutDone, true);
-    setChoices([
+    const choices = [
       choice(ui.login, signIn),
       choice(ui.googleLogin, signInWithGoogle),
-      choice(ui.createAccount, createAccount),
-      choice(ui.playAsGuest, playAsGuest)
-    ]);
+      choice(ui.createAccount, createAccount)
+    ];
+    if (appConfig.allowGuests) {
+      choices.push(choice(ui.playAsGuest, playAsGuest));
+    }
+    setChoices(choices);
   }
 
   function showCharacterSelect() {
@@ -3898,6 +4003,74 @@
     return Boolean(state.account && !state.account.guest && state.account.accessToken && state.account.id);
   }
 
+  function canEnterGame() {
+    return !IS_BETA || (isCloudAccount() && state.betaAccessAllowed);
+  }
+
+  async function ensureBetaAccess(options = {}) {
+    if (!IS_BETA) {
+      state.betaAccessChecked = true;
+      state.betaAccessAllowed = true;
+      return true;
+    }
+    if (!isCloudAccount()) {
+      state.betaAccessChecked = true;
+      state.betaAccessAllowed = false;
+      return false;
+    }
+    if (!options.silent) {
+      write(ui.betaAccessChecking, true);
+    }
+    try {
+      await refreshAccountSession();
+      const filters = [];
+      if (state.account.id) {
+        filters.push(`user_id.eq.${encodeURIComponent(state.account.id)}`);
+      }
+      if (state.account.email) {
+        filters.push(`email.eq.${encodeURIComponent(state.account.email.toLowerCase())}`);
+      }
+      const query = filters.length ? `&or=(${filters.join(",")})` : "";
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${BETA_ALLOWLIST_TABLE}?select=user_id,email,is_active&is_active=eq.true${query}&limit=1`, {
+        headers: supabaseHeaders()
+      });
+      if (!response.ok) {
+        throw new Error(`Beta allowlist request failed: ${response.status}`);
+      }
+      const rows = await response.json();
+      state.betaAccessChecked = true;
+      state.betaAccessAllowed = rows.length > 0;
+      if (!state.betaAccessAllowed) {
+        state.player = null;
+        if (!options.silent) {
+          write(ui.betaAccessDenied, true);
+          setChoices([
+            choice(ui.login, signIn),
+            choice(ui.googleLogin, signInWithGoogle),
+            choice(ui.betaReportIssue, openIssueForm)
+          ]);
+        }
+        return false;
+      }
+      if (!options.silent) {
+        write(ui.betaAccessGranted, true);
+      }
+      return true;
+    } catch {
+      state.betaAccessChecked = true;
+      state.betaAccessAllowed = false;
+      if (!options.silent) {
+        write(ui.betaAccessDenied, true);
+        setChoices([
+          choice(ui.login, signIn),
+          choice(ui.googleLogin, signInWithGoogle),
+          choice(ui.betaReportIssue, openIssueForm)
+        ]);
+      }
+      return false;
+    }
+  }
+
   async function refreshAccountSession(force = false) {
     if (!state.account || state.account.guest || !state.account.refreshToken) {
       return false;
@@ -3921,8 +4094,11 @@
     if (!isCloudAccount()) {
       return;
     }
+    if (IS_BETA && !(await ensureBetaAccess({ silent: true }))) {
+      return;
+    }
     await refreshAccountSession();
-    await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?on_conflict=user_id`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/${PROFILE_TABLE}?on_conflict=user_id`, {
       method: "POST",
       headers: {
         ...supabaseHeaders(),
@@ -3941,9 +4117,12 @@
     if (!isCloudAccount()) {
       return;
     }
+    if (IS_BETA && !state.betaAccessAllowed) {
+      return;
+    }
     try {
       await refreshAccountSession();
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/user_game_data?select=stats,saved_game,settings&user_id=eq.${state.account.id}&limit=1`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${GAME_DATA_TABLE}?select=stats,saved_game,settings&user_id=eq.${state.account.id}&limit=1`, {
         headers: supabaseHeaders()
       });
       if (!response.ok) {
@@ -3969,9 +4148,12 @@
     if (!isCloudAccount()) {
       return;
     }
+    if (IS_BETA && !(await ensureBetaAccess({ silent: true }))) {
+      return;
+    }
     try {
       await refreshAccountSession();
-      await fetch(`${SUPABASE_URL}/rest/v1/user_game_data?on_conflict=user_id`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/${GAME_DATA_TABLE}?on_conflict=user_id`, {
         method: "POST",
         headers: {
           ...supabaseHeaders(),

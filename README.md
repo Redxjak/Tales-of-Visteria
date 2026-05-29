@@ -33,6 +33,10 @@ Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor 
 
 Public usernames are stored in `user_profiles`, and cloud stats/save data are stored in `user_game_data`. Guest play still uses local browser storage only.
 
+## Private beta
+
+The private beta lives under `/beta/` and is gated inside the app by Supabase login plus a tester allowlist. Beta saves, stats, and leaderboard rows use separate tables and browser storage from the live game. Run `supabase/beta.sql` before inviting testers, then follow `BETA_TESTING.md`.
+
 ## Current chapter
 
 The playable opening includes:
