@@ -1451,45 +1451,56 @@
       return;
     }
     state.betaCreator = {
-      name: name.slice(0, 32),
-      rolls: rollBetaStatArray()
+      name: name.slice(0, 32)
     };
-    showBetaStatRolls();
+    showBetaClassSelect();
   }
 
   function showBetaStatRolls() {
+    const creator = state.betaCreator;
+    if (!creator || !creator.characterClass) {
+      showBetaCharacterName();
+      return;
+    }
+    const build = betaClassBuilds[creator.characterClass];
+    if (!creator.rolls) {
+      creator.rolls = rollBetaStatArray();
+    }
+    creator.assignedStats = assignBetaStats(creator.rolls, build.priority);
+    write([
+      "Beta Character Creation",
+      "",
+      `Name: ${creator.name}`,
+      `Class: ${build.title}`,
+      `Rolled stats: ${creator.rolls.join(", ")}`,
+      `Assigned stats: ${betaAttributeLine(creator.assignedStats)}`,
+      "",
+      "Stats are rolled as 4d6 drop lowest and auto-assigned to this class's best attributes."
+    ].join("\n"), true);
+    setChoices([
+      choice("Keep These Stats", showBetaRaceSelect),
+      choice("Reroll Stats", () => {
+        creator.rolls = rollBetaStatArray();
+        showBetaStatRolls();
+      }),
+      choice(t("choice.back"), showBetaClassSelect)
+    ]);
+  }
+
+  function showBetaClassSelect() {
     const creator = state.betaCreator;
     if (!creator) {
       showBetaCharacterName();
       return;
     }
     write([
-      "Beta Character Creation",
+      "Choose a Class",
       "",
       `Name: ${creator.name}`,
-      `Rolled stats: ${creator.rolls.join(", ")}`,
-      "",
-      "Stats are rolled as 4d6 drop lowest. Choose a class next and the beta will auto-assign the rolls to that class's best attributes."
-    ].join("\n"), true);
-    setChoices([
-      choice("Keep These Stats", showBetaClassSelect),
-      choice("Reroll Stats", () => {
-        creator.rolls = rollBetaStatArray();
-        showBetaStatRolls();
-      }),
-      choice(t("choice.back"), showStart)
-    ]);
-  }
-
-  function showBetaClassSelect() {
-    const creator = state.betaCreator;
-    write([
-      "Choose a Class",
       "",
       ...Object.keys(betaClassBuilds).map((key) => {
         const build = betaClassBuilds[key];
-        const assigned = assignBetaStats(creator.rolls, build.priority);
-        return `${build.title}: ${build.description}\n  Auto stats: ${betaAttributeLine(assigned)}`;
+        return `${build.title}: ${build.description}`;
       })
     ].join("\n\n"), true);
     setChoices([
@@ -1497,14 +1508,15 @@
       choice("Ranger", () => chooseBetaClass("ranger")),
       choice("Warlock", () => chooseBetaClass("scholar")),
       choice("Fighter", () => chooseBetaClass("dwarf")),
-      choice(t("choice.back"), showBetaStatRolls)
+      choice(t("choice.back"), showBetaCharacterName)
     ]);
   }
 
   function chooseBetaClass(characterClass) {
     state.betaCreator.characterClass = characterClass;
+    state.betaCreator.rolls = rollBetaStatArray();
     state.betaCreator.assignedStats = assignBetaStats(state.betaCreator.rolls, betaClassBuilds[characterClass].priority);
-    showBetaRaceSelect();
+    showBetaStatRolls();
   }
 
   function showBetaRaceSelect() {
