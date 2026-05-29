@@ -9,6 +9,8 @@
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
   const XP_PER_LEVEL = 50;
+  const BETA_CHARACTER_SCHEMA_VERSION = "beta-character-v1";
+  const BETA_ATTRIBUTES = ["str", "dex", "con", "int", "wis", "cha"];
   const SUPABASE_URL = "https://fojkijwketpzxsbikmsl.supabase.co";
   const SUPABASE_KEY = "sb_publishable_pxMr-7kXAoQ9gz0mTTWLew_FAIRtAio";
   const CHANNEL_CONFIG = {
@@ -97,7 +99,7 @@
   const uiTextByLanguage = {
     en: {
       english: "English",
-      spanish: "Espa?ol",
+      spanish: "Español",
       language: "Language",
       characterSheet: "Character Sheet",
       plotDevelopment: "Plot Development",
@@ -172,7 +174,7 @@
     },
     es: {
       english: "English",
-      spanish: "Espa?ol",
+      spanish: "Español",
       language: "Idioma",
       characterSheet: "Hoja de personaje",
       plotDevelopment: "Desarrollo de la trama",
@@ -187,20 +189,20 @@
       hp: "PV",
       ac: "CA",
       attackBonus: "Bonif. prob. ataque",
-      damage: "Da?o",
+      damage: "Daño",
       equipment: "Equipo",
       enemyHp: "PV enemigos",
-      leaderboard: "Clasificaci?n",
+      leaderboard: "Clasificación",
       submitScore: "Enviar puntaje",
-      playerNamePrompt: "Nombre para la clasificaci?n:",
+      playerNamePrompt: "Nombre para la clasificación:",
       scoreSubmitted: "Puntaje enviado.",
-      scoreSubmitFailed: "No se pudo enviar el puntaje. Tal vez falte crear la tabla de clasificaci?n.",
+      scoreSubmitFailed: "No se pudo enviar el puntaje. Tal vez falte crear la tabla de clasificación.",
       deathScorePrompt: "Has muerto. Haz clic aqui para ver tus puntajes",
-      leaderboardLoading: "Cargando clasificaci?n...",
-      leaderboardEmpty: "Todav?a no hay puntajes.",
-      leaderboardFailed: "No se pudo cargar la clasificaci?n.",
-      leaderboardHeader: "Clasificaci?n",
-      leaderboardWarning: "Aviso: la clasificaci?n se reiniciar? con el lanzamiento de la versi?n 1.0. Se har? una menci?n especial para los tres mejores jugadores en ese momento.",
+      leaderboardLoading: "Cargando clasificación...",
+      leaderboardEmpty: "Todavía no hay puntajes.",
+      leaderboardFailed: "No se pudo cargar la clasificación.",
+      leaderboardHeader: "Clasificación",
+      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       loginScreen: "Inicia sesion, crea una cuenta o juega como invitado",
       displayNamePrompt: "Elige un nombre publico:",
@@ -341,19 +343,19 @@
   const classTranslations = {
     es: {
       warrior: {
-        title: "B?rbaro",
+        title: "Bárbaro",
         race: "Goliat",
-        description: "Un B?rbaro goliat con mucha salud y ataques cuerpo a cuerpo brutales."
+        description: "Un Bárbaro goliat con mucha salud y ataques cuerpo a cuerpo brutales."
       },
       ranger: {
         title: "Explorador",
         race: "Elfo",
-        description: "Un Explorador ?lfico con gran precisi?n y dos ataques."
+        description: "Un Explorador élfico con gran precisión y dos ataques."
       },
       scholar: {
         title: "Brujo",
         race: "Humano",
-        description: "Un Brujo humano con poder eldritch y buena persuasi?n."
+        description: "Un Brujo humano con poder eldritch y buena persuasión."
       },
       dwarf: {
         title: "Guerrero",
@@ -368,6 +370,154 @@
     }
   };
   Object.entries(classTranslations[lang] || {}).forEach(([key, values]) => Object.assign(classes[key], values));
+
+  const betaClassBuilds = {
+    warrior: {
+      title: "Barbarian",
+      priority: ["str", "con", "dex", "wis", "cha", "int"],
+      maxHealth: 46,
+      acBase: 12,
+      attackStat: "str",
+      damageStat: "str",
+      manaBase: 6,
+      attacks: 2,
+      bonus: "combat",
+      gear: ["travel cloak"],
+      abilities: ["rage"],
+      description: "STR/CON bruiser with Rage and heavy weapon pressure."
+    },
+    ranger: {
+      title: "Ranger",
+      priority: ["dex", "wis", "con", "str", "int", "cha"],
+      maxHealth: 40,
+      acBase: 13,
+      attackStat: "dex",
+      damageStat: "dex",
+      manaBase: 7,
+      attacks: 2,
+      bonus: "sneak",
+      gear: ["travel cloak"],
+      abilities: ["hunters_mark"],
+      description: "DEX/WIS striker with accurate attacks and prey marking."
+    },
+    scholar: {
+      title: "Warlock",
+      priority: ["cha", "con", "dex", "wis", "int", "str"],
+      maxHealth: 36,
+      acBase: 12,
+      attackStat: "cha",
+      damageStat: "cha",
+      manaBase: 12,
+      attacks: 1,
+      bonus: "persuasion",
+      gear: ["old journal"],
+      abilities: ["eldritch_bolt", "drain_life"],
+      description: "CHA caster with the deepest mana pool and life-draining magic."
+    },
+    dwarf: {
+      title: "Fighter",
+      priority: ["str", "con", "dex", "wis", "int", "cha"],
+      maxHealth: 44,
+      acBase: 14,
+      attackStat: "str",
+      damageStat: "str",
+      manaBase: 8,
+      attacks: 2,
+      bonus: "lore",
+      gear: ["stone token"],
+      abilities: ["second_wind"],
+      description: "Weapon master with sturdy defenses and a self-heal."
+    }
+  };
+
+  const betaRaces = {
+    goliath: {
+      name: "Goliath",
+      bonuses: { str: 2, con: 1 },
+      maxHealth: 4,
+      ability: "stone_endurance",
+      description: "+2 STR, +1 CON, +4 HP, Stone Endurance."
+    },
+    elf: {
+      name: "Elf",
+      bonuses: { dex: 2, wis: 1 },
+      attackBonus: 1,
+      ability: "elven_focus",
+      description: "+2 DEX, +1 WIS, +1 attack chance, Elven Focus."
+    },
+    human: {
+      name: "Human",
+      bonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
+      mana: 2,
+      ability: "human_resolve",
+      description: "+1 to every stat, +2 mana, Human Resolve."
+    },
+    dwarf: {
+      name: "Dwarf",
+      bonuses: { con: 2, str: 1 },
+      ac: 1,
+      ability: "dwarven_guard",
+      description: "+2 CON, +1 STR, +1 AC, Dwarven Guard."
+    }
+  };
+
+  const betaWeapons = {
+    greataxe: {
+      name: "Greataxe",
+      damageDie: 12,
+      damageBonus: 1,
+      attackBonus: -1,
+      attacks: 0,
+      skill: "cleave",
+      description: "d12 damage, -1 attack chance, +1 damage, grants Cleave."
+    },
+    longbow: {
+      name: "Longbow",
+      damageDie: 8,
+      damageBonus: 0,
+      attackBonus: 1,
+      attacks: 1,
+      skill: "pinning_shot",
+      description: "d8 damage, +1 attack chance, +1 attack speed, grants Pinning Shot."
+    },
+    battleaxe: {
+      name: "Battleaxe and Shield",
+      damageDie: 8,
+      damageBonus: 0,
+      attackBonus: 0,
+      ac: 1,
+      attacks: 0,
+      skill: "shield_bash",
+      description: "d8 damage, +1 AC, grants Shield Bash."
+    },
+    eldritch_focus: {
+      name: "Eldritch Focus",
+      damageDie: 10,
+      damageBonus: 1,
+      attackBonus: 0,
+      attacks: 0,
+      skill: "hex_bolt",
+      attackStat: "cha",
+      damageStat: "cha",
+      description: "d10 spell damage, +1 damage, uses CHA, grants Hex Bolt."
+    }
+  };
+
+  const betaPowers = {
+    rage: { name: "Rage", cost: 3, type: "buff", turns: 3, text: "Rage burns through your muscles. For three turns, your attacks deal +2 damage." },
+    hunters_mark: { name: "Hunter's Mark", cost: 3, type: "attack", attackBonus: 2, damageBonus: 4, text: "You mark the weakest opening and strike with cruel precision." },
+    eldritch_bolt: { name: "Eldritch Bolt", cost: 2, type: "spell", damageDie: 10, attackBonus: 1, damageBonus: 2, text: "A violet bolt snaps from your focus." },
+    drain_life: { name: "Drain Life", cost: 5, type: "spell", damageDie: 8, attackBonus: 0, damageBonus: 2, healHalf: true, text: "You tear warmth out of the enemy and drag it into your lungs." },
+    second_wind: { name: "Second Wind", cost: 4, type: "heal", healDie: 10, healBonus: 8, text: "You grit your teeth, reset your stance, and pull yourself back together." },
+    stone_endurance: { name: "Stone Endurance", cost: 3, type: "guard", acBonus: 4, text: "Your skin hardens like cliff stone until the enemy turn ends." },
+    elven_focus: { name: "Elven Focus", cost: 2, type: "attack", attackBonus: 3, damageBonus: 0, text: "Your breathing slows and the world narrows to one clean strike." },
+    human_resolve: { name: "Human Resolve", cost: 2, type: "restore", manaRestore: 4, text: "You steady yourself and claw back a little power." },
+    dwarven_guard: { name: "Dwarven Guard", cost: 2, type: "guard", acBonus: 3, text: "You lock your guard and dare the enemy to move you." },
+    cleave: { name: "Cleave", cost: 3, type: "cleave", attackBonus: -1, damageBonus: 2, text: "You swing wide, trying to carry the blow into a second foe." },
+    pinning_shot: { name: "Pinning Shot", cost: 3, type: "attack", attackBonus: 2, damageBonus: 2, guard: true, text: "The shot pins the enemy's movement and buys you space." },
+    shield_bash: { name: "Shield Bash", cost: 2, type: "attack", damageDie: 6, attackBonus: 1, damageBonus: 1, guard: true, text: "You crash forward behind the shield." },
+    hex_bolt: { name: "Hex Bolt", cost: 3, type: "spell", damageDie: 12, attackBonus: 1, damageBonus: 3, text: "The focus spits a black-edged curse." }
+  };
 
   const monsterStats = {
     goblin: { name: "Goblin", ac: 15, hp: 7, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 20 },
@@ -425,24 +575,24 @@
       unlucky: "Sin suerte",
       forest_mind_break: "Aturdido y confundido",
       ghost_slayer: "Cazafantasmas",
-      ghost_kiss: "No es tu g?tica",
+      ghost_kiss: "No es tu gótica",
       pyromaniac: "Piromano",
       send_hydra: "Al diablo con ellos",
       correct_chest_key: "La llave correcta",
       mimic_nap: "Duerme bien",
       played_everyone: "Grupo completo",
-      mask_on: "?Me siento bien!",
-      warehouse_survived: "?Fue un sue?o?",
+      mask_on: "¡Me siento bien!",
+      warehouse_survived: "¿Fue un sueño?",
       bridge_cleared: "Puente superado",
       high_ac: "No puedes tocar esto",
       big_damage: "Powa ilimitado",
-      maxed_out: "Al m?ximo",
-      all_day: "Puedo hacer esto todo el d?a",
+      maxed_out: "Al máximo",
+      all_day: "Puedo hacer esto todo el día",
       map_goblin: "Goblin de mapas",
-      wrong_turn_right_lesson: "Giro equivocado, lecci?n correcta",
+      wrong_turn_right_lesson: "Giro equivocado, lección correcta",
       haunted_carry_on: "Equipaje encantado",
-      this_is_mine_now: "Esto ahora es m?o",
-      union_violation: "Violaci?n sindical",
+      this_is_mine_now: "Esto ahora es mío",
+      union_violation: "Violación sindical",
       aggressively_educational: "Agresivamente educativo",
       free_wazetax: "Liberen a Wazetax",
       no_one_left_in_cage: "Nadie queda en una jaula",
@@ -475,9 +625,9 @@
       caravan_run: "escapaste de la caravana",
       forest_attempt: "probaste el camino del bosque",
       choose_cave: "elegiste la cueva",
-      go_deeper: "avanzaste m?s profundo en Visteria",
-      ghost_choice: "enfrentaste a la ni?a fantasma",
-      doll_choice: "decidiste qu? hacer con la mu?eca",
+      go_deeper: "avanzaste más profundo en Visteria",
+      ghost_choice: "enfrentaste a la niña fantasma",
+      doll_choice: "decidiste qué hacer con la muñeca",
       district_choice: "elegiste una ruta de distrito",
       search: "buscaste suministros",
       residential_choice: "exploraste el distrito residencial",
@@ -1103,6 +1253,11 @@
     const intro = lang === "es"
       ? "Tales of Visteria creado por Redxjak. Musica usada bajo la Pixabay Content License."
       : "Tales of Visteria created by Redxjak. Music used under the Pixabay Content License.";
+    const storyCredits = [
+      "A story DM'd by Jubikino",
+      "The world of Visteria was created by MolarCapybara",
+      "An adaptation made by Redxjak"
+    ];
     const musicHeading = lang === "es" ? "Musica" : "Music";
     const licenseLabel = lang === "es" ? "Resumen de licencia de Pixabay" : "Pixabay license summary";
     const trackHtml = MUSIC_CREDITS.map((track) => `
@@ -1115,6 +1270,7 @@
       <article class="faq-entry">
         <h3>Tales of Visteria</h3>
         <p>${escapeHtml(intro)}</p>
+        <p>${storyCredits.map((credit) => escapeHtml(credit)).join("<br>")}</p>
       </article>
       <article class="faq-entry">
         <h3>${escapeHtml(musicHeading)}</h3>
@@ -1265,6 +1421,10 @@
   }
 
   function showCharacterSelect() {
+    if (IS_BETA) {
+      showBetaCharacterName();
+      return;
+    }
     setMusic("ambient");
     const lines = [t("story.character_select"), ""];
     Object.keys(classes).forEach((key) => {
@@ -1279,6 +1439,113 @@
       choice("Kili", () => newPlayer("dwarf")),
       choice("Jon the DM", () => newPlayer("dm")),
       choice(t("choice.back"), showStart)
+    ]);
+  }
+
+  function showBetaCharacterName() {
+    setMusic("ambient");
+    const previousName = state.account && state.account.name && state.account.name !== ui.guest ? state.account.name : "";
+    const name = promptText("Character name:", previousName);
+    if (!name) {
+      showStart();
+      return;
+    }
+    state.betaCreator = {
+      name: name.slice(0, 32),
+      rolls: rollBetaStatArray()
+    };
+    showBetaStatRolls();
+  }
+
+  function showBetaStatRolls() {
+    const creator = state.betaCreator;
+    if (!creator) {
+      showBetaCharacterName();
+      return;
+    }
+    write([
+      "Beta Character Creation",
+      "",
+      `Name: ${creator.name}`,
+      `Rolled stats: ${creator.rolls.join(", ")}`,
+      "",
+      "Stats are rolled as 4d6 drop lowest. Choose a class next and the beta will auto-assign the rolls to that class's best attributes."
+    ].join("\n"), true);
+    setChoices([
+      choice("Keep These Stats", showBetaClassSelect),
+      choice("Reroll Stats", () => {
+        creator.rolls = rollBetaStatArray();
+        showBetaStatRolls();
+      }),
+      choice(t("choice.back"), showStart)
+    ]);
+  }
+
+  function showBetaClassSelect() {
+    const creator = state.betaCreator;
+    write([
+      "Choose a Class",
+      "",
+      ...Object.keys(betaClassBuilds).map((key) => {
+        const build = betaClassBuilds[key];
+        const assigned = assignBetaStats(creator.rolls, build.priority);
+        return `${build.title}: ${build.description}\n  Auto stats: ${betaAttributeLine(assigned)}`;
+      })
+    ].join("\n\n"), true);
+    setChoices([
+      choice("Barbarian", () => chooseBetaClass("warrior")),
+      choice("Ranger", () => chooseBetaClass("ranger")),
+      choice("Warlock", () => chooseBetaClass("scholar")),
+      choice("Fighter", () => chooseBetaClass("dwarf")),
+      choice(t("choice.back"), showBetaStatRolls)
+    ]);
+  }
+
+  function chooseBetaClass(characterClass) {
+    state.betaCreator.characterClass = characterClass;
+    state.betaCreator.assignedStats = assignBetaStats(state.betaCreator.rolls, betaClassBuilds[characterClass].priority);
+    showBetaRaceSelect();
+  }
+
+  function showBetaRaceSelect() {
+    write([
+      "Choose a Race",
+      "",
+      ...Object.values(betaRaces).map((race) => `${race.name}: ${race.description}`)
+    ].join("\n\n"), true);
+    setChoices([
+      choice("Goliath", () => chooseBetaRace("goliath")),
+      choice("Elf", () => chooseBetaRace("elf")),
+      choice("Human", () => chooseBetaRace("human")),
+      choice("Dwarf", () => chooseBetaRace("dwarf")),
+      choice(t("choice.back"), showBetaClassSelect)
+    ]);
+  }
+
+  function chooseBetaRace(race) {
+    state.betaCreator.race = race;
+    showBetaWeaponSelect();
+  }
+
+  function showBetaWeaponSelect() {
+    const creator = state.betaCreator;
+    const build = betaClassBuilds[creator.characterClass];
+    const race = betaRaces[creator.race];
+    const finalAttributes = betaFinalAttributes(creator.assignedStats, race);
+    write([
+      "Choose a Starting Weapon",
+      "",
+      `${creator.name} the ${race.name} ${build.title}`,
+      betaAttributeLine(finalAttributes),
+      "",
+      ...Object.values(betaWeapons).map((weapon) => `${weapon.name}: ${weapon.description}`)
+    ].join("\n\n"), true);
+    setChoices([
+      choice("Greataxe", () => newBetaPlayer("greataxe")),
+      choice("Longbow", () => newBetaPlayer("longbow")),
+      choice("Battleaxe and Shield", () => newBetaPlayer("battleaxe")),
+      choice("Eldritch Focus", () => newBetaPlayer("eldritch_focus")),
+      choice(t("choice.back"), showBetaRaceSelect)
     ]);
   }
 
@@ -1323,6 +1590,7 @@
         wearingSilverMask: false,
         maskPowerClaimed: false,
         warehouseStage: "not_started",
+        warehouseRested: false,
         bridgeEndMaskResolved: false,
         maskCorruption: 0,
         orderQuestionsAsked: [],
@@ -1354,6 +1622,132 @@
     continueChapter(characterClass === "dm" ? "dmIntro" : "caravan", true);
   }
 
+  function newBetaPlayer(weaponKey) {
+    const creator = state.betaCreator;
+    const build = betaClassBuilds[creator.characterClass];
+    const race = betaRaces[creator.race];
+    const weapon = betaWeapons[weaponKey];
+    const attributes = betaFinalAttributes(creator.assignedStats, race);
+    const conMod = betaModifier(attributes.con);
+    const maxHealth = build.maxHealth + (conMod * 3) + (race.maxHealth || 0);
+    const maxMana = Math.max(0, build.manaBase + betaModifier(attributes[build.damageStat]) + (race.mana || 0));
+    state.player = {
+      schemaVersion: BETA_CHARACTER_SCHEMA_VERSION,
+      betaCustom: true,
+      class: creator.characterClass,
+      name: creator.name,
+      title: build.title,
+      race: race.name,
+      raceKey: creator.race,
+      weaponKey,
+      weaponName: weapon.name,
+      attributes,
+      rolledStats: [...creator.rolls],
+      health: maxHealth,
+      maxHealth,
+      mana: maxMana,
+      maxMana,
+      gold: 8,
+      healthPotions: 0,
+      supplies: 3,
+      gear: [...build.gear, weapon.name],
+      bonus: build.bonus,
+      knownAbilities: [...new Set([...build.abilities, race.ability, weapon.skill].filter(Boolean))],
+      level: BASE_LEVEL,
+      experience: 0,
+      xpToNext: BASE_XP_TO_NEXT,
+      upgrades: { ac: 0, damage: 0 },
+      flags: initialPlayerFlags(),
+      score: {
+        fightsWon: 0,
+        decisions: 0,
+        submitted: false,
+        startedAt: Date.now()
+      },
+      gameOverReason: "default"
+    };
+    delete state.betaCreator;
+    state.stats[creator.characterClass].runs += 1;
+    saveStats();
+    checkPlayedEveryone();
+    continueChapter("caravan", true);
+  }
+
+  function initialPlayerFlags() {
+    return {
+      forestAttempts: 0,
+      girlHint: "",
+      girlHelped: false,
+      monstersScattered: false,
+      hasDoll: false,
+      pickedUpDoll: false,
+      dollInSack: false,
+      dollRevealed: false,
+      hasThroneMap: false,
+      hasPartialMap: false,
+      bridgeRoute: randomBridgeRoute(),
+      bridgeNavigationStep: 0,
+      districtsRested: false,
+      smallShackCleared: false,
+      bridgeXpAwarded: false,
+      bridgeRested: false,
+      hasDwarvenAle: false,
+      hasMagistoneOrb: false,
+      hasSilverMask: false,
+      wearingSilverMask: false,
+      maskPowerClaimed: false,
+      warehouseStage: "not_started",
+      warehouseRested: false,
+      bridgeEndMaskResolved: false,
+      maskCorruption: 0,
+      orderQuestionsAsked: [],
+      bridgeEndRested: false,
+      castleSideRested: false,
+      hasCastleSupplies: false,
+      servantAmbushCleared: false,
+      orcCampOuterResolved: false,
+      orcCampPartyResolved: false,
+      aleBarrelUsed: false,
+      partyRockTried: false,
+      rescuedWazetax: false,
+      wazetaxHidden: false,
+      wazetaxQuestionsAsked: [],
+      completedRecorded: false,
+      deathRecorded: false
+    };
+  }
+
+  function rollBetaStatArray() {
+    return BETA_ATTRIBUTES.map(() => {
+      const rolls = [rollDie(6), rollDie(6), rollDie(6), rollDie(6)].sort((a, b) => b - a);
+      return rolls.slice(0, 3).reduce((total, value) => total + value, 0);
+    }).sort((a, b) => b - a);
+  }
+
+  function assignBetaStats(rolls, priority) {
+    const assigned = {};
+    priority.forEach((attribute, index) => {
+      assigned[attribute] = rolls[index];
+    });
+    return assigned;
+  }
+
+  function betaFinalAttributes(baseAttributes, race) {
+    const attributes = {};
+    BETA_ATTRIBUTES.forEach((attribute) => {
+      attributes[attribute] = (baseAttributes[attribute] || 10) + (race.bonuses[attribute] || 0);
+    });
+    return attributes;
+  }
+
+  function betaModifier(score) {
+    return Math.floor((score - 10) / 2);
+  }
+
+  function betaAttributeLine(attributes) {
+    return `STR ${attributes.str} | DEX ${attributes.dex} | CON ${attributes.con} | INT ${attributes.int} | WIS ${attributes.wis} | CHA ${attributes.cha}`;
+  }
+
   function continueChapter(chapter, clear = false) {
     if (!state.player) {
       showStart();
@@ -1376,6 +1770,7 @@
       districts,
       residential,
       bridge,
+      warehouseApproach,
       warehouse: warehouseRitual,
       bridgeEnd,
       orcCamps,
@@ -2087,6 +2482,10 @@
   function awardMap(source = "") {
     state.player.flags.hasThroneMap = true;
     unlock("map_goblin");
+    if (state.player.flags.hasPartialMap) {
+      state.player.flags.hasPartialMap = false;
+      removeItem("torn bridge map");
+    }
     if (source === "merchant") {
       unlock("customer_service");
     }
@@ -2350,14 +2749,18 @@
       attackersPerRound: 2,
       deathReason: "mimic",
       onWin: () => {
-        state.player.flags.hasPartialMap = true;
         state.player.flags.hasMagistoneOrb = true;
-        addItem("torn bridge map");
         addItem("magistone orb");
-        writeKey("story.mimic_house_escape", {
-          first: bridgeDirectionLabel(bridgeRoute()[0]),
-          second: bridgeDirectionLabel(bridgeRoute()[1])
-        });
+        if (state.player.flags.hasThroneMap) {
+          writeKey("story.mimic_house_escape_full_map");
+        } else {
+          state.player.flags.hasPartialMap = true;
+          addItem("torn bridge map");
+          writeKey("story.mimic_house_escape", {
+            first: bridgeDirectionLabel(bridgeRoute()[0]),
+            second: bridgeDirectionLabel(bridgeRoute()[1])
+          });
+        }
         mimicHouseTongueCatch();
       },
       onRun: mimicFlee
@@ -2506,11 +2909,34 @@
       } else {
         unlock("blind_crossing");
       }
-      warehouseRitual();
+      warehouseApproach();
       return;
     }
     writeKey("story.bridge_quiet");
     showBridgeNavigationChoices();
+  }
+
+  function warehouseApproach(clear = false) {
+    state.player.chapter = "warehouseApproach";
+    setMusic("mystery");
+    writeKey("story.warehouse_approach", {}, clear);
+    const choices = [];
+    if (!state.player.flags.warehouseRested) {
+      choices.push(choice(t("choice.rest"), restBeforeWarehouse));
+    }
+    choices.push(
+      choice(t("choice.enter_warehouse"), warehouseRitual),
+      choice(t("choice.save"), saveGame)
+    );
+    setChoices(choices);
+  }
+
+  function restBeforeWarehouse() {
+    state.player.flags.warehouseRested = true;
+    state.player.health = state.player.maxHealth;
+    restoreBetaMana();
+    writeKey("story.warehouse_rest");
+    warehouseApproach();
   }
 
   function warehouseRitual() {
@@ -2732,6 +3158,7 @@
     if (!state.player.flags.bridgeEndRested) {
       state.player.flags.bridgeEndRested = true;
       state.player.health = state.player.maxHealth;
+      restoreBetaMana();
       writeKey("story.bridge_end_rest");
     }
     resolveBridgeEndMask();
@@ -2776,6 +3203,7 @@
   function restAfterBridge() {
     state.player.flags.bridgeEndRested = true;
     state.player.health = state.player.maxHealth;
+    restoreBetaMana();
     writeKey("story.bridge_end_rest");
     showBridgeEndChoices();
   }
@@ -2988,7 +3416,7 @@
     state.player.flags.rescuedWazetax = false;
     unlock("not_my_problem");
     writeKey("story.wazetax_left");
-    castleExteriorEndpoint(true);
+    castleApproach();
   }
 
   function castleFrontWithWazetax() {
@@ -3027,7 +3455,7 @@
     state.player.flags.wazetaxHidden = true;
     unlock("no_one_left_in_cage");
     writeKey("story.wazetax_hide");
-    castleExteriorEndpoint(true);
+    castleApproach();
   }
 
   function castleExteriorEndpoint(clear = false) {
@@ -3112,6 +3540,7 @@
   function castleSideEntrance() {
     state.player.flags.castleSideRested = true;
     state.player.health = state.player.maxHealth;
+    restoreBetaMana();
     writeKey("story.castle_side_entrance");
     saveGame();
     setChoices([choice(t("choice.enter_side_passage"), castleKitchen)]);
@@ -3261,7 +3690,8 @@
       onWin: options.onWin || null,
       onRun: options.onRun || null,
       deathReason: options.deathReason || "combat",
-      guarding: false
+      guarding: false,
+      playerEffects: {}
     };
     writeKey("ui.initiate_combat");
     showCombatChoices();
@@ -3281,10 +3711,19 @@
       choice(t("choice.dodge"), dodge),
       choice(t("choice.run"), runCombat)
     ];
+    if (state.player.betaCustom) {
+      betaCombatChoices().forEach((betaChoice) => labels.splice(labels.length - 2, 0, betaChoice));
+    }
     if (state.player.gear.includes("health potion")) {
       labels.push(choice(t("choice.health_potion"), drinkPotion));
     }
     setChoices(labels);
+  }
+
+  function betaCombatChoices() {
+    return (state.player.knownAbilities || [])
+      .map((id) => betaPowers[id] ? choice(`${betaPowers[id].name} (${betaPowers[id].cost} Mana)`, () => useBetaPower(id)) : null)
+      .filter(Boolean);
   }
 
   function playerAttack(heavy) {
@@ -3320,7 +3759,7 @@
       } else if (natural === 20 || total >= currentTarget.ac) {
         const damageRoll = rollDie(damageDie);
         const critDamageRoll = natural === 20 ? rollDie(damageDie) : 0;
-        let damage = damageRoll + stats.damageBonus;
+        let damage = damageRoll + stats.damageBonus + betaRageDamageBonus();
         if (natural === 20) {
           damage += critDamageRoll;
         }
@@ -3350,6 +3789,117 @@
     if (!finishCombatDeath()) {
       showCombatChoices();
     }
+  }
+
+  function useBetaPower(powerId) {
+    if (!state.combat || finishCombatDeath()) {
+      return;
+    }
+    const power = betaPowers[powerId];
+    if (!power) {
+      showCombatChoices();
+      return;
+    }
+    if ((state.player.mana || 0) < power.cost) {
+      write(`Not enough mana for ${power.name}.`);
+      showCombatChoices();
+      return;
+    }
+    state.player.mana -= power.cost;
+    write(power.text);
+    if (power.type === "buff") {
+      state.combat.playerEffects.rageTurns = power.turns || 3;
+      write(`${power.name} is active.`);
+    } else if (power.type === "heal") {
+      const healRoll = rollDie(power.healDie || 8);
+      const healed = Math.min(state.player.maxHealth - state.player.health, healRoll + (power.healBonus || 0));
+      state.player.health += healed;
+      write(`${power.name} restores ${healed} HP.`);
+    } else if (power.type === "restore") {
+      const restored = Math.min(state.player.maxMana - state.player.mana, power.manaRestore || 0);
+      state.player.mana += restored;
+      write(`${power.name} restores ${restored} mana.`);
+    } else if (power.type === "guard") {
+      state.combat.guarding = true;
+      state.combat.playerEffects.guardBonus = Math.max(state.combat.playerEffects.guardBonus || 0, power.acBonus || 0);
+    } else {
+      betaPowerAttack(power);
+    }
+    if (state.combat && state.combat.enemies.every((enemy) => enemy.hp <= 0)) {
+      combatVictory();
+      return;
+    }
+    enemyTurn();
+    if (!finishCombatDeath()) {
+      showCombatChoices();
+    }
+  }
+
+  function betaPowerAttack(power) {
+    const stats = combatStats();
+    const target = state.combat.enemies.find((enemy) => enemy.hp > 0);
+    if (!target) {
+      return;
+    }
+    const damageDie = power.damageDie || stats.damageDie;
+    const attackBonus = stats.attackBonus + (power.attackBonus || 0);
+    const natural = d20();
+    const total = natural + attackBonus;
+    writeKey("story.combat_attack_roll", {
+      attack_number: 1,
+      natural,
+      bonus: attackBonus,
+      total,
+      enemy: target.name,
+      ac: target.ac
+    });
+    if (natural === 1 || (natural !== 20 && total < target.ac)) {
+      writeKey("story.combat_miss");
+      return;
+    }
+    const damageRoll = rollDie(damageDie);
+    const critDamageRoll = natural === 20 ? rollDie(damageDie) : 0;
+    let damage = damageRoll + stats.damageBonus + (power.damageBonus || 0) + betaRageDamageBonus();
+    if (natural === 20) {
+      damage += critDamageRoll;
+    }
+    const damageDealt = Math.min(target.hp, damage);
+    target.hp -= damage;
+    writeKey("story.combat_hit", {
+      enemy: target.name,
+      damage,
+      damage_dealt: damageDealt,
+      damage_roll: damageRollText(damageDie, damageRoll, stats.damageBonus + (power.damageBonus || 0), critDamageRoll)
+    });
+    if (power.healHalf && damageDealt > 0) {
+      const healed = Math.min(state.player.maxHealth - state.player.health, Math.ceil(damageDealt / 2));
+      state.player.health += healed;
+      write(`${power.name} restores ${healed} HP.`);
+    }
+    if (power.guard) {
+      state.combat.guarding = true;
+    }
+    if (power.type === "cleave") {
+      const secondTarget = state.combat.enemies.find((enemy) => enemy.hp > 0 && enemy !== target);
+      if (secondTarget) {
+        const cleaveDamage = Math.max(1, Math.floor(damage / 2));
+        secondTarget.hp -= cleaveDamage;
+        write(`${power.name} carries into ${secondTarget.name} for ${cleaveDamage} damage.`);
+      }
+    }
+    if (damageDealt > 20) {
+      unlock("big_damage");
+    }
+    state.combat.enemies.filter((enemy) => enemy.hp <= 0).forEach((enemy) => {
+      if (!enemy.droppedLogged) {
+        enemy.droppedLogged = true;
+        writeKey("story.combat_enemy_drops", { enemy: enemy.name });
+      }
+    });
+  }
+
+  function betaRageDamageBonus() {
+    return state.combat && state.combat.playerEffects && state.combat.playerEffects.rageTurns > 0 ? 2 : 0;
   }
 
   function dodge() {
@@ -3404,7 +3954,8 @@
   }
 
   function enemyTurn() {
-    const playerAc = combatStats().ac + (state.combat.guarding ? 5 : 0);
+    const guardBonus = state.combat.playerEffects ? state.combat.playerEffects.guardBonus || 0 : 0;
+    const playerAc = combatStats().ac + (state.combat.guarding ? 5 : 0) + guardBonus;
     const attackers = state.combat.enemies.filter((enemy) => enemy.hp > 0).slice(0, state.combat.attackersPerRound);
     for (const enemy of attackers) {
       const natural = d20(false);
@@ -3435,6 +3986,12 @@
       }
     }
     state.combat.guarding = false;
+    if (state.combat.playerEffects) {
+      state.combat.playerEffects.guardBonus = 0;
+      if (state.combat.playerEffects.rageTurns > 0) {
+        state.combat.playerEffects.rageTurns -= 1;
+      }
+    }
     finishCombatDeath();
   }
 
@@ -3444,7 +4001,6 @@
     }
     state.player.gameOverReason = state.combat.deathReason;
     state.combat = null;
-    setMusic("silence");
     gameOver();
     return true;
   }
@@ -3466,6 +4022,9 @@
   }
 
   function combatStats() {
+    if (state.player.betaCustom) {
+      return betaCombatStats();
+    }
     const base = classes[state.player.class];
     return {
       ac: base.ac + state.player.upgrades.ac,
@@ -3473,6 +4032,22 @@
       damageDie: base.damageDie,
       damageBonus: base.damageBonus + state.player.upgrades.damage,
       attacks: base.attacks
+    };
+  }
+
+  function betaCombatStats() {
+    const build = betaClassBuilds[state.player.class];
+    const race = betaRaces[state.player.raceKey] || { bonuses: {} };
+    const weapon = betaWeapons[state.player.weaponKey] || betaWeapons.greataxe;
+    const attributes = state.player.attributes || {};
+    const attackStat = weapon.attackStat || build.attackStat;
+    const damageStat = weapon.damageStat || build.damageStat;
+    return {
+      ac: build.acBase + betaModifier(attributes.dex || 10) + (race.ac || 0) + (weapon.ac || 0) + state.player.upgrades.ac,
+      attackBonus: 3 + betaModifier(attributes[attackStat] || 10) + (race.attackBonus || 0) + (weapon.attackBonus || 0),
+      damageDie: weapon.damageDie,
+      damageBonus: betaModifier(attributes[damageStat] || 10) + (weapon.damageBonus || 0) + state.player.upgrades.damage,
+      attacks: Math.max(1, build.attacks + (weapon.attacks || 0))
     };
   }
 
@@ -3558,6 +4133,7 @@
           return;
         }
         state.player.health = state.player.maxHealth;
+        restoreBetaMana();
         writeKey("story.level_heal");
         continueAfterLevel();
       })
@@ -3607,6 +4183,12 @@
 
   function isPlayerDead() {
     return Boolean(state.player && (state.player.health <= 0 || (state.player.flags && state.player.flags.deathRecorded)));
+  }
+
+  function restoreBetaMana() {
+    if (state.player && state.player.betaCustom) {
+      state.player.mana = state.player.maxMana;
+    }
   }
 
   function rollD20(skill) {
@@ -3697,7 +4279,7 @@
   }
 
   function gameOver() {
-    setMusic("silence");
+    setMusic("mystery", { volume: MUSIC_VOLUMES.low });
     clearLevelRewardState();
     if (state.player && !state.player.flags.deathRecorded) {
       state.stats[state.player.class].died += 1;
@@ -3731,12 +4313,13 @@
   }
 
   async function showLeaderboard() {
+    setMusic("epic", { volume: MUSIC_VOLUMES.low });
     write(ui.leaderboardLoading, true);
     setChoices([choice(t("choice.main_menu"), showStart)]);
     try {
       await refreshAccountSession();
       const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}?select=player_name,character_name,score,ending_reached,fights_won,achievements_unlocked,created_at&order=score.desc&limit=25`, {
-        headers: supabaseHeaders(true)
+        headers: supabaseHeaders(!IS_BETA)
       });
       if (!response.ok) {
         throw new Error(`Leaderboard request failed: ${response.status}`);
@@ -3792,7 +4375,7 @@
     try {
       await refreshAccountSession();
       let response = await postLeaderboardScore(payload);
-      if (!response.ok && payload.user_id) {
+      if (!IS_BETA && !response.ok && payload.user_id) {
         delete payload.user_id;
         response = await postLeaderboardScore(payload, true);
       }
@@ -3826,10 +4409,13 @@
   function leaderboardPayload(playerName) {
     ensureScoreState();
     const achievementsUnlocked = Object.keys(state.stats._achievements || {}).filter((key) => state.stats._achievements[key]).length;
+    const characterClass = state.player.betaCustom
+      ? `${state.player.race} ${state.player.title} (${state.player.weaponName})`
+      : state.player.title;
     const payload = {
       player_name: playerName,
       character_name: state.player.name,
-      character_class: state.player.title,
+      character_class: characterClass,
       score: calculateScore(achievementsUnlocked),
       ending_reached: Boolean(state.player.flags.completedRecorded),
       fights_won: state.player.score.fightsWon,
@@ -4207,6 +4793,20 @@
 
   function ensurePlayerState() {
     ensureScoreState();
+    if (state.player.betaCustom) {
+      const build = betaClassBuilds[state.player.class];
+      const race = betaRaces[state.player.raceKey];
+      const weapon = betaWeapons[state.player.weaponKey];
+      if (build && race && weapon) {
+        state.player.schemaVersion = state.player.schemaVersion || BETA_CHARACTER_SCHEMA_VERSION;
+        state.player.weaponName = state.player.weaponName || weapon.name;
+        state.player.knownAbilities = state.player.knownAbilities || [...new Set([...build.abilities, race.ability, weapon.skill].filter(Boolean))];
+        state.player.maxMana = state.player.maxMana || Math.max(0, build.manaBase + betaModifier((state.player.attributes || {})[build.damageStat] || 10) + (race.mana || 0));
+        if (state.player.mana === undefined) {
+          state.player.mana = state.player.maxMana;
+        }
+      }
+    }
     if (!state.player.flags) {
       state.player.flags = {};
     }
@@ -4233,6 +4833,9 @@
     }
     if (!state.player.flags.warehouseStage) {
       state.player.flags.warehouseStage = "not_started";
+    }
+    if (state.player.flags.warehouseRested === undefined) {
+      state.player.flags.warehouseRested = false;
     }
     if (state.player.flags.bridgeEndMaskResolved === undefined) {
       state.player.flags.bridgeEndMaskResolved = false;
@@ -4321,6 +4924,12 @@
     }
     try {
       state.player = JSON.parse(saved);
+      if (IS_BETA && state.player.schemaVersion !== BETA_CHARACTER_SCHEMA_VERSION) {
+        state.player = null;
+        write("This beta requires a new custom character. Older saves are not valid here.", true);
+        setChoices([choice(t("choice.new_game"), showCharacterSelect), choice(t("choice.main_menu"), showStart)]);
+        return;
+      }
       ensurePlayerState();
       checkStatAchievements();
       writeKey("ui.loaded_game", {}, true);
@@ -4375,6 +4984,9 @@
     if (!state.player) {
       return "";
     }
+    if (state.player.betaCustom) {
+      return `${state.player.name} the ${state.player.race} ${state.player.title}   HP: ${state.player.health}/${state.player.maxHealth}   Mana: ${state.player.mana}/${state.player.maxMana}   Weapon: ${state.player.weaponName}`;
+    }
     return `${state.player.name} the ${state.player.title}   Health: ${state.player.health}/${state.player.maxHealth}   Gold: ${state.player.gold}   Supplies: ${state.player.supplies}   Gear: ${state.player.gear.join(", ") || t("ui.none")}`;
   }
 
@@ -4383,7 +4995,7 @@
       return ui.noCharacter;
     }
     const stats = combatStats();
-    return [
+    const lines = [
       `${ui.trait.padEnd(18)}${ui.value}`,
       "------------------------------",
       `${ui.name.padEnd(18)}${state.player.name}`,
@@ -4395,12 +5007,29 @@
       `${ui.ac.padEnd(18)}${stats.ac}`,
       `${ui.attackBonus.padEnd(18)}+${stats.attackBonus}`,
       `${ui.damage.padEnd(18)}d${stats.damageDie} + ${stats.damageBonus}`,
+    ];
+    if (state.player.betaCustom) {
+      lines.push(
+        `${"Mana".padEnd(18)}${state.player.mana}/${state.player.maxMana}`,
+        `${"Weapon".padEnd(18)}${state.player.weaponName}`,
+        "",
+        "Attributes",
+        "------------------------------",
+        betaAttributeLine(state.player.attributes),
+        "",
+        "Powers",
+        "------------------------------",
+        (state.player.knownAbilities || []).map((id) => betaPowers[id] ? `${betaPowers[id].name} (${betaPowers[id].cost} mana)` : id).join("\n") || t("ui.none")
+      );
+    }
+    lines.push(
       "",
       ui.equipment,
       "------------------------------",
       state.player.gear.join("\n") || t("ui.none"),
       enemyHpText()
-    ].join("\n");
+    );
+    return lines.join("\n");
   }
 
   function enemyHpText() {

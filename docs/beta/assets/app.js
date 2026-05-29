@@ -3416,7 +3416,7 @@
     state.player.flags.rescuedWazetax = false;
     unlock("not_my_problem");
     writeKey("story.wazetax_left");
-    castleExteriorEndpoint(true);
+    castleApproach();
   }
 
   function castleFrontWithWazetax() {
@@ -3455,7 +3455,7 @@
     state.player.flags.wazetaxHidden = true;
     unlock("no_one_left_in_cage");
     writeKey("story.wazetax_hide");
-    castleExteriorEndpoint(true);
+    castleApproach();
   }
 
   function castleExteriorEndpoint(clear = false) {
