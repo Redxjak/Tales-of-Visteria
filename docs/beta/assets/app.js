@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.6";
+  const VERSION = "0.9.7";
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
@@ -2234,6 +2234,8 @@
     writeKey("story.dm_manor");
     setChoices([
       choice(t("choice.dm_manor_orb"), () => {
+        state.player.flags.hasMagistoneOrb = true;
+        addItem("magistone orb");
         writeKey("story.dm_manor_orb");
         setChoices([choice(t("choice.move_bridge"), dmBridge)]);
       }),
@@ -2254,6 +2256,8 @@
       }),
       choice(t("choice.dm_bridge"), dmBridge),
       choice(t("choice.dm_mimic_loot"), () => {
+        state.player.flags.hasMagistoneOrb = true;
+        addItem("magistone orb");
         writeKey("story.dm_mimic_loot");
         setChoices([choice(t("choice.drag_out"), dmBridge)]);
       }),
@@ -2418,19 +2422,210 @@
   function dmOrcCampsPreview() {
     state.player.chapter = "dmOrcCamps";
     writeKey("story.dm_orc_camps_preview");
-    recordEnding();
-    writeCurrentScore();
     saveGame();
     setChoices([
-      choice(ui.submitScore, submitScore),
-      choice(ui.leaderboard, showLeaderboard),
-      choice(t("choice.current_status"), currentGameStatus),
-      choice(t("choice.main_menu"), showStart),
+      choice(t("choice.dm_sneak_tents"), dmOrcCampSneakTents),
+      choice(t("choice.dm_sneak_barrels"), dmOrcCampSneakBarrels),
+      choice(t("choice.dm_fight_fire_orcs"), dmOrcCampFireFight),
       choice(t("choice.save"), saveGame)
     ]);
   }
 
+  function dmOrcSceneRoll() {
+    const roll = d20();
+    writeKey("story.dm_orc_roll", { roll });
+    return roll;
+  }
+
+  function dmOrcCampSneakTents() {
+    writeKey("story.dm_orc_tents");
+    const roll = dmOrcSceneRoll();
+    if (roll >= 9) {
+      writeKey("story.dm_orc_tents_success");
+      dmOrcCampInnerPath();
+      return;
+    }
+    writeKey("story.dm_orc_tents_fail");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmOrcCampInnerPath),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("combat"))
+    ]);
+  }
+
+  function dmOrcCampSneakBarrels() {
+    writeKey("story.dm_orc_barrels");
+    const roll = dmOrcSceneRoll();
+    if (roll >= 15) {
+      writeKey("story.dm_orc_barrels_success");
+      dmOrcCampInnerPath();
+      return;
+    }
+    writeKey("story.dm_orc_barrels_fail");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmOrcCampInnerPath),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("combat"))
+    ]);
+  }
+
+  function dmOrcCampFireFight() {
+    writeKey("story.dm_orc_fire_fight");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmOrcCampInnerPath),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("combat"))
+    ]);
+  }
+
+  function dmOrcCampInnerPath() {
+    state.player.flags.orcCampOuterResolved = true;
+    writeKey("story.dm_orc_inner_path");
+    dmOrcPartyArea();
+  }
+
+  function dmOrcPartyArea() {
+    writeKey("story.dm_orc_party_area");
+    setChoices([
+      choice(t("choice.dm_sneak_past_party"), dmOrcPartySneak),
+      choice(t("choice.dm_create_distraction"), dmOrcPartyDistraction),
+      choice(t("choice.dm_fight_party_orcs"), dmOrcPartyFight),
+      choice(t("choice.save"), saveGame)
+    ]);
+  }
+
+  function dmOrcPartySneak() {
+    writeKey("story.dm_orc_party_sneak");
+    dmOrcCages();
+  }
+
+  function dmOrcPartyDistraction() {
+    writeKey("story.dm_orc_party_distraction");
+    setChoices([
+      choice(t("choice.dm_light_ale_barrel"), dmOrcPartyAleBarrel),
+      choice(t("choice.dm_throw_rock"), dmOrcPartyThrowRock),
+      choice(t("choice.back"), dmOrcPartyArea)
+    ]);
+  }
+
+  function dmOrcPartyAleBarrel() {
+    state.player.flags.aleBarrelUsed = true;
+    const roll = dmOrcSceneRoll();
+    if (roll <= 4) {
+      writeKey("story.dm_orc_party_ale_hurt");
+      setChoices([
+        choice(t("choice.dm_if_survive"), dmOrcPartyArea),
+        choice(t("choice.dm_if_die"), () => dmGameOver("ale_explosion"))
+      ]);
+      return;
+    }
+    if (roll >= 11) {
+      unlock("osha_incident");
+      writeKey("story.dm_orc_party_ale_success");
+      dmOrcCages();
+      return;
+    }
+    writeKey("story.dm_orc_party_ale_fail");
+    dmOrcPartyArea();
+  }
+
+  function dmOrcPartyThrowRock() {
+    state.player.flags.partyRockTried = true;
+    writeKey("story.dm_orc_party_rock_fail");
+    dmOrcPartyArea();
+  }
+
+  function dmOrcPartyFight() {
+    writeKey("story.dm_orc_party_fight");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmOrcPartyFightChoice),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("orc_party"))
+    ]);
+  }
+
+  function dmOrcPartyFightChoice() {
+    writeKey("story.dm_orc_party_fight_warning");
+    setChoices([
+      choice(t("choice.dm_fall_back_cages"), () => {
+        unlock("union_violation");
+        dmOrcCages();
+      }),
+      choice(t("choice.dm_keep_fighting_party"), dmOrcPartyFightDisaster)
+    ]);
+  }
+
+  function dmOrcPartyFightDisaster() {
+    unlock("aggressively_educational");
+    writeKey("story.dm_orc_party_fight_disaster");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmOrcCages),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("orc_party"))
+    ]);
+  }
+
+  function dmOrcCages() {
+    state.player.flags.orcCampPartyResolved = true;
+    writeKey("story.dm_orc_cages");
+    setChoices([
+      choice(t("choice.dm_rescue_wazetax"), dmRescueWazetax),
+      choice(t("choice.dm_leave_wazetax"), dmLeaveWazetax)
+    ]);
+  }
+
+  function dmRescueWazetax() {
+    state.player.flags.rescuedWazetax = true;
+    state.player.flags.wazetaxHidden = false;
+    state.player.flags.wazetaxQuestionsAsked = [];
+    unlock("free_wazetax");
+    writeKey("story.dm_wazetax_rescue");
+    dmCastleFrontWithWazetax();
+  }
+
+  function dmLeaveWazetax() {
+    state.player.flags.rescuedWazetax = false;
+    unlock("not_my_problem");
+    writeKey("story.dm_wazetax_left");
+    dmCastleApproach();
+  }
+
+  function dmCastleFrontWithWazetax() {
+    state.player.chapter = "dmCastleApproach";
+    writeKey("story.dm_castle_front_wazetax");
+    dmShowWazetaxChoices();
+  }
+
+  function dmShowWazetaxChoices() {
+    const asked = state.player.flags.wazetaxQuestionsAsked || [];
+    const choices = [];
+    if (!asked.includes("who")) {
+      choices.push(choice(t("choice.dm_ask_wazetax_who"), () => dmAskWazetax("who")));
+    }
+    if (!asked.includes("happened")) {
+      choices.push(choice(t("choice.dm_ask_wazetax_happened"), () => dmAskWazetax("happened")));
+    }
+    if (!asked.includes("knows")) {
+      choices.push(choice(t("choice.dm_ask_wazetax_knows"), () => dmAskWazetax("knows")));
+    }
+    choices.push(choice(t("choice.dm_hide_wazetax"), dmHideWazetax));
+    setChoices(choices);
+  }
+
+  function dmAskWazetax(topic) {
+    writeKey(`story.dm_wazetax_${topic}`);
+    const asked = state.player.flags.wazetaxQuestionsAsked || [];
+    if (!asked.includes(topic)) {
+      asked.push(topic);
+    }
+    state.player.flags.wazetaxQuestionsAsked = asked;
+    dmShowWazetaxChoices();
+  }
+
+  function dmHideWazetax() {
+    state.player.flags.wazetaxHidden = true;
+    unlock("no_one_left_in_cage");
+    writeKey("story.dm_wazetax_hide");
+    dmCastleApproach();
+  }
+
   function dmCastleApproach() {
+    state.player.chapter = "dmCastleApproach";
     writeKey("story.dm_castle_approach");
     const choices = [
       choice(t("choice.dm_main_gate"), dmCastleMainGate),
@@ -2438,7 +2633,12 @@
     ];
     if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
       choices.push(choice(t("choice.dm_put_mask_on"), () => {
+        const hadClaimedMaskPower = state.player.flags.maskPowerClaimed;
         state.player.flags.wearingSilverMask = true;
+        applySilverMaskPower();
+        if (hadClaimedMaskPower) {
+          unlock("this_is_mine_now");
+        }
         writeKey("story.dm_castle_put_on_mask");
         dmCastleMainGate();
       }));
@@ -2461,7 +2661,9 @@
 
   function dmCastleSideEntrance() {
     state.player.health = state.player.maxHealth;
+    restoreBetaMana();
     writeKey("story.dm_castle_side_entrance");
+    saveGame();
     setChoices([choice(t("choice.dm_servant_quarters"), dmServantQuarters)]);
   }
 
@@ -2475,11 +2677,128 @@
     writeKey("story.dm_throne_room");
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.dm_crown_temptation");
+      setChoices([
+        choice(t("choice.dm_succumb_mask"), dmSuccumbToMask),
+        choice(t("choice.dm_resist_mask"), dmResistanceSummoning)
+      ]);
+      return;
+    }
+    if (state.player.flags.hasSilverMask) {
+      writeKey("story.dm_crown_temptation");
+      setChoices([
+        choice(t("choice.dm_put_mask_on"), () => {
+          state.player.flags.wearingSilverMask = true;
+          state.player.flags.playerSuccumbedToMask = true;
+          applySilverMaskPower();
+          unlock("this_is_mine_now");
+          dmMaskCorruptionEnding();
+        }),
+        choice(t("choice.dm_resist_mask"), dmResistanceSummoning)
+      ]);
+      return;
+    }
+    dmResistanceSummoning();
+  }
+
+  function dmSuccumbToMask() {
+    state.player.flags.playerSuccumbedToMask = true;
+    unlock("this_is_mine_now");
+    dmMaskCorruptionEnding();
+  }
+
+  function dmMaskCorruptionEnding() {
+    writeKey("story.dm_mask_corruption");
+    dmGameOver("mask_corruption");
+  }
+
+  function dmResistanceSummoning() {
+    if (state.player.flags.maskPowerClaimed) {
+      unlock("false_confidence");
     }
     writeKey("story.dm_false_hydra_final");
+    unlock("obliviarch_revealed");
+    setChoices([choice(t("choice.dm_face_obliviarch"), dmObliviarchPhaseOne)]);
+  }
+
+  function dmObliviarchPhaseOne() {
+    writeKey("story.dm_obliviarch_phase_one");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmObliviarchPhaseTwoIntro),
+      choice(t("choice.dm_if_lose"), () => {
+        if (state.player.flags.hasMagistoneOrb && !state.player.flags.magistoneOrbSpent) {
+          state.player.flags.magistoneOrbSpent = true;
+          state.player.flags.hasMagistoneOrb = false;
+          removeItem("magistone orb");
+          writeKey("story.dm_magistone_orb_trigger");
+          dmObliviarchPhaseTwoIntro();
+          return;
+        }
+        dmGameOver("false_hydra");
+      })
+    ]);
+  }
+
+  function dmObliviarchPhaseTwoIntro() {
+    writeKey("story.dm_obliviarch_phase_two_intro");
+    setChoices([choice(t("choice.dm_face_obliviarch"), dmObliviarchPhaseTwo)]);
+  }
+
+  function dmObliviarchPhaseTwo() {
+    writeKey("story.dm_obliviarch_phase_two");
+    setChoices([
+      choice(t("choice.dm_if_win"), dmFinalStrikePrompt),
+      choice(t("choice.dm_if_lose"), () => dmGameOver("false_hydra"))
+    ]);
+  }
+
+  function dmFinalStrikePrompt() {
+    writeKey("story.dm_final_strike_prompt");
+    setChoices([
+      choice(t("choice.dm_attack_doll"), dmDestroyObliviarch),
+      choice(t("choice.dm_attack_crown"), dmFinalStrikeWrongTarget),
+      choice(t("choice.dm_attack_creature"), dmFinalStrikeWrongTarget)
+    ]);
+  }
+
+  function dmFinalStrikeWrongTarget() {
+    writeKey("story.dm_final_strike_wrong_target");
+    dmFinalStrikePrompt();
+  }
+
+  function dmDestroyObliviarch() {
+    state.player.flags.crownDestroyed = true;
+    state.player.flags.dollDestroyed = true;
+    state.player.flags.obliviarchDestroyed = true;
+    state.player.flags.hasDoll = false;
+    state.player.flags.dollInSack = false;
+    removeItem("cracked doll");
+    unlock("crownbreaker");
+    writeKey("story.dm_obliviarch_destroyed");
+    dmOrderEntersThroneRoom();
+  }
+
+  function dmOrderEntersThroneRoom() {
+    state.player.flags.orderObservedPlayer = true;
+    writeKey("story.dm_order_throne_room_arrival");
+    if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
+      state.player.flags.hasSilverMask = false;
+      removeItem("silver mask");
+      writeKey("story.dm_order_destroys_stored_mask");
+    } else {
+      writeKey("story.dm_order_no_mask_comment");
+    }
+    writeKey("story.dm_order_cleanses_throne_room");
+    setChoices([choice(t("choice.dm_leave_throne_room"), dmSurvivingRouteClosing)]);
+  }
+
+  function dmSurvivingRouteClosing() {
+    writeKey("story.dm_surviving_route_closing");
     recordEnding();
+    writeCurrentScore();
     saveGame();
     setChoices([
+      choice(ui.submitScore, submitScore),
+      choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.main_menu"), showStart),
       choice(t("choice.current_status"), currentGameStatus)
     ]);

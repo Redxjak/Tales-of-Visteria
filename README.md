@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.6**
+Current version: **0.9.7**
 
 ## Community
 
@@ -36,7 +36,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.8.1 expands the bridge into a major ritual sequence, extends Jon the DM through the orc camps preview, adds new achievements, embedded level-up choices, and score breakdowns on game over.
+Version 0.9.7 extends Jon the DM through the current finale, adds narrated DM coverage for the orc camps, Wazetax, castle, throne room, Obliviarch, and ending, and keeps the live/beta/Twine story paths aligned.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
@@ -52,7 +52,7 @@ The playable opening includes:
 
 - Browser start screen with login, guest play, new game, and load game
 - Character selection with Cletus the Warrior, Ren the Ranger, Cal the Scholar, Kili the Dwarf, and Jon the DM
-- Special Jon the DM route based on the Visio map
+- Special Jon the DM route through the current finale
 - A caravan attack and forced escape
 - Forest loop with miasma
 - Cave route into the buried city
@@ -61,12 +61,12 @@ The playable opening includes:
 - Doll choice after the pale girl disappears
 - City or barracks route, feeding into the residential area
 - Lava bridge approach and patrol encounter
-- Warehouse ritual battle against orcs, cultists, and a dangerous ritual leader
+- Warehouse ritual battle against cultists and a dangerous ritual leader
 - A hidden bridge turning point with branching consequences
 - Ritual surge branch with leave, stop, or jump-into-the-hole outcomes
-- False Hydra interruption and the arrival of the Order
+- Obliviarch interruption and the arrival of the Order
 - Bridge-end checkpoint with rest, score submission, save, and leaderboard options
-- Orc camps preview endpoint for the next story update
+- Expanded orc camps, Wazetax prisoner branch, castle approach/interior, throne room, Obliviarch finale, Order cleanup, and surviving-route ending
 - Browser version with user accounts and leaderboards
 - English story/UI text loaded from `docs/assets/data/en.json`, ready for additional language files
 - Monster references included in the browser game data
