@@ -298,7 +298,7 @@
       name: "Ren",
       title: "Ranger",
       race: "Elf",
-      maxHealth: 44,
+      maxHealth: 46,
       gold: 8,
       supplies: 3,
       gear: ["longbow", "short blade"],
@@ -314,12 +314,12 @@
       name: "Cal",
       title: "Warlock",
       race: "Human",
-      maxHealth: 40,
+      maxHealth: 44,
       gold: 10,
       supplies: 2,
       gear: ["old journal", "silver charm", "eldritch focus"],
       bonus: "persuasion",
-      ac: 14,
+      ac: 15,
       attackBonus: 7,
       damageDie: 10,
       damageBonus: 4,
@@ -1814,9 +1814,9 @@
       health: template.maxHealth,
       maxHealth: template.maxHealth,
       gold: template.gold,
-      healthPotions: 0,
+      healthPotions: characterClass === "dm" ? 0 : 1,
       supplies: template.supplies,
-      gear: [...template.gear],
+      gear: characterClass === "dm" ? [...template.gear] : [...template.gear, "health potion"],
       bonus: template.bonus,
       level: BASE_LEVEL,
       experience: 0,
@@ -1867,6 +1867,8 @@
         rescuedWazetax: false,
         wazetaxHidden: false,
         wazetaxQuestionsAsked: [],
+        bridgeWrongTurns: 0,
+        classSaveUsed: false,
         completedRecorded: false,
         deathRecorded: false
       },
@@ -1981,6 +1983,8 @@
       rescuedWazetax: false,
       wazetaxHidden: false,
       wazetaxQuestionsAsked: [],
+      bridgeWrongTurns: 0,
+      classSaveUsed: false,
       completedRecorded: false,
       deathRecorded: false
     };
@@ -3217,6 +3221,20 @@
     if (direction !== route[step]) {
       unlock("wrong_turn_right_lesson");
       writeKey("story.bridge_wrong");
+      state.player.flags.bridgeWrongTurns = (state.player.flags.bridgeWrongTurns || 0) + 1;
+      if (state.player.flags.bridgeWrongTurns === 1) {
+        const damage = rollDie(10) + rollDie(10) + 8;
+        state.player.health = Math.max(0, state.player.health - damage);
+        write(`The old bridge trap snaps shut, but you wrench yourself free before it finishes the job. You take ${damage} damage and stumble back to the start of the trapped path.`);
+        if (state.player.health <= 0) {
+          state.player.gameOverReason = "bridge_trap";
+          gameOver();
+          return;
+        }
+        state.player.flags.bridgeNavigationStep = 0;
+        showBridgeNavigationChoices();
+        return;
+      }
       state.player.gameOverReason = "bridge_trap";
       state.player.health = 0;
       gameOver();
@@ -3312,6 +3330,10 @@
   }
 
   function warehouseWatchRitual() {
+    if (tryWarlockHardSave("The silver charm at your throat cracks with a sharp flash. Cal tears his mind away from the ritual's pull and staggers back to his feet.")) {
+      warehouseRunCaught();
+      return;
+    }
     state.player.gameOverReason = "warehouse";
     state.player.health = 0;
     writeKey("story.warehouse_watch_ritual");
@@ -3474,6 +3496,10 @@
 
   function warehouseJumpHole() {
     writeKey("story.warehouse_jump_hole");
+    if (tryWarlockHardSave("Eldritch force catches Cal at the edge of the impossible fall and throws him back onto the warehouse floor. The charm goes cold and silent.")) {
+      warehouseAfterMask();
+      return;
+    }
     state.player.gameOverReason = "ritual_hole";
     state.player.health = 0;
     gameOver();
@@ -4030,6 +4056,14 @@
 
   function maskCorruptionEnding() {
     setMusic("mystery", { volume: MUSIC_VOLUMES.low });
+    if (tryWarlockHardSave("The silver charm burns white-hot and shatters. Cal remembers his own name through the mask's hunger and rips the thing away before the crown can claim him.")) {
+      state.player.flags.playerSuccumbedToMask = false;
+      state.player.flags.hasSilverMask = false;
+      state.player.flags.wearingSilverMask = false;
+      removeItem("silver mask");
+      resistanceSummoning();
+      return;
+    }
     state.player.flags.playerSuccumbedToMask = true;
     state.player.flags.orderObservedPlayer = true;
     state.player.flags.hasSilverMask = false;
@@ -4044,6 +4078,9 @@
   }
 
   function resistanceSummoning() {
+    state.player.health = state.player.maxHealth;
+    restoreBetaMana();
+    write("You draw one steady breath before the throne answers. Health and mana return to full.");
     writeKey("story.doll_summoning");
     writeHtml(`<figure class="boss-reveal"><img src="${ASSET_BASE}/obliviarch.png" alt="Obliviarch"><figcaption>Obliviarch</figcaption></figure>`);
     unlock("obliviarch_revealed");
@@ -4062,6 +4099,9 @@
         gameOver();
       }
     });
+    if (state.player.flags.hasMagistoneOrb && !state.player.flags.magistoneOrbSpent) {
+      triggerMagistoneRescue();
+    }
   }
 
   function obliviarchPhaseTwoIntro() {
@@ -4410,6 +4450,18 @@
     if (!state.combat || finishCombatDeath()) {
       return;
     }
+    if (state.player.class === "ranger" && useClassSave("Ren vanishes into the chaos before the enemy can close the gap. Once per run, Run succeeds automatically.")) {
+      writeKey("story.combat_run_success");
+      const onRun = state.combat.onRun;
+      state.combat = null;
+      restoreChapterMusic();
+      if (onRun) {
+        onRun();
+      } else {
+        goBridge();
+      }
+      return;
+    }
     const roll = rollD20("sneak");
     if (roll >= 12) {
       writeKey("story.combat_run_success");
@@ -4449,6 +4501,7 @@
     const guardBonus = state.combat.playerEffects ? state.combat.playerEffects.guardBonus || 0 : 0;
     const playerAc = combatStats().ac + (state.combat.guarding ? 5 : 0) + guardBonus;
     const attackers = state.combat.enemies.filter((enemy) => enemy.hp > 0).slice(0, state.combat.attackersPerRound);
+    let dwarvenGuardSaveActive = false;
     for (const enemy of attackers) {
       const natural = d20(false);
       const total = natural + enemy.attackBonus;
@@ -4460,6 +4513,17 @@
         let damage = damageRoll + enemy.damageBonus;
         if (natural === 20) {
           damage += critDamageRoll;
+        }
+        if (
+          state.player.class === "dwarf"
+          && !state.player.flags.classSaveUsed
+          && state.player.health - damage <= Math.ceil(state.player.maxHealth / 2)
+        ) {
+          useClassSave("Kili locks his shield and plants his feet. Incoming combat damage is halved for the rest of this enemy turn.");
+          dwarvenGuardSaveActive = true;
+        }
+        if (dwarvenGuardSaveActive) {
+          damage = Math.ceil(damage / 2);
         }
         state.player.health = Math.max(0, state.player.health - damage);
         writeKey("story.enemy_hit", {
@@ -4525,6 +4589,10 @@
 
   function finishCombatDeath() {
     if (!state.combat || state.player.health > 0) {
+      return false;
+    }
+    if (state.player.class === "warrior" && useClassSave("Cletus refuses to fall. Once per run, lethal combat damage leaves him at 1 HP instead.")) {
+      state.player.health = 1;
       return false;
     }
     state.player.gameOverReason = state.combat.deathReason;
@@ -4777,6 +4845,27 @@
     if (state.player && state.player.betaCustom) {
       state.player.mana = state.player.maxMana;
     }
+  }
+
+  function useClassSave(message) {
+    if (!state.player || state.player.class === "dm" || state.player.flags.classSaveUsed) {
+      return false;
+    }
+    state.player.flags.classSaveUsed = true;
+    write(message);
+    return true;
+  }
+
+  function tryWarlockHardSave(message) {
+    if (!state.player || state.player.class !== "scholar") {
+      return false;
+    }
+    if (!useClassSave(message)) {
+      return false;
+    }
+    state.player.health = state.player.maxHealth;
+    restoreBetaMana();
+    return true;
   }
 
   function rollD20(skill) {
@@ -5534,6 +5623,12 @@
     }
     if (state.player.flags.partyRockTried === undefined) {
       state.player.flags.partyRockTried = false;
+    }
+    if (state.player.flags.bridgeWrongTurns === undefined) {
+      state.player.flags.bridgeWrongTurns = 0;
+    }
+    if (state.player.flags.classSaveUsed === undefined) {
+      state.player.flags.classSaveUsed = false;
     }
     if (state.player.flags.rescuedWazetax === undefined) {
       state.player.flags.rescuedWazetax = false;
