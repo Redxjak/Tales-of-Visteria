@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.5";
+  const VERSION = "0.9.6";
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
@@ -4244,9 +4244,6 @@
   }
 
   function betaCombatActionLabels() {
-    if (!state.player.betaCustom) {
-      return { attack: t("choice.attack"), heavy: t("choice.heavy_attack") };
-    }
     return betaClassCombatLabels[state.player.class] || { attack: t("choice.attack"), heavy: t("choice.heavy_attack") };
   }
 
