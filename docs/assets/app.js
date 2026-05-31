@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.8";
+  const VERSION = "0.9.9";
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
@@ -149,7 +149,7 @@
       leaderboardEmpty: "No scores yet.",
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
-      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 6,890.",
+      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 6,600.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       promptCancel: "Cancel",
       promptContinue: "Continue",
@@ -233,7 +233,7 @@
       leaderboardEmpty: "Todavía no hay puntajes.",
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
-      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 6,890.",
+      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 6,600.",
       leaderboardLine: "{rank}. {name} - {score} ({character})",
       promptCancel: "Cancelar",
       promptContinue: "Continuar",
@@ -318,7 +318,7 @@
       damageDie: 12,
       damageBonus: 4,
       attacks: 2,
-      description: "A Goliath Barbarian with high health and brutal melee attacks."
+      description: "A Goliath Barbarian with a greataxe, Rage, and Reckless Attack pressure."
     },
     ranger: {
       name: "Ren",
@@ -334,7 +334,7 @@
       damageDie: 8,
       damageBonus: 4,
       attacks: 2,
-      description: "An Elven Ranger with strong accuracy and two attacks."
+      description: "An Elven Ranger with longbow attacks and sharp ranged accuracy."
     },
     scholar: {
       name: "Cal",
@@ -350,7 +350,7 @@
       damageDie: 10,
       damageBonus: 4,
       attacks: 2,
-      description: "A Human Warlock with eldritch power and persuasion."
+      description: "A Human Warlock with Eldritch Blast, an eldritch focus, and persuasion."
     },
     dwarf: {
       name: "Kili",
@@ -366,7 +366,7 @@
       damageDie: 8,
       damageBonus: 4,
       attacks: 2,
-      description: "A Dwarven Fighter with armor, stamina, and two attacks."
+      description: "A Dwarven Fighter with battleaxe attacks, armor, and Second Wind stamina."
     },
     dm: {
       name: "Jon",
@@ -391,22 +391,22 @@
       warrior: {
         title: "Bárbaro",
         race: "Goliat",
-        description: "Un Bárbaro goliat con mucha salud y ataques cuerpo a cuerpo brutales."
+        description: "Un Barbaro goliat con gran hacha, Furia y presion de Ataque Temerario."
       },
       ranger: {
         title: "Explorador",
         race: "Elfo",
-        description: "Un Explorador élfico con gran precisión y dos ataques."
+        description: "Un Explorador elfico con ataques de arco largo y gran precision a distancia."
       },
       scholar: {
         title: "Brujo",
         race: "Humano",
-        description: "Un Brujo humano con poder eldritch y buena persuasión."
+        description: "Un Brujo humano con Eldritch Blast, foco eldritch y buena persuasion."
       },
       dwarf: {
         title: "Guerrero",
         race: "Enano",
-        description: "Un Guerrero enano con armadura, aguante y dos ataques."
+        description: "Un Guerrero enano con ataques de hacha de batalla, armadura y Segundo Aliento."
       },
       dm: {
         title: "DM",
@@ -430,7 +430,7 @@
       bonus: "combat",
       gear: ["travel cloak"],
       abilities: ["rage"],
-      description: "STR/CON bruiser with Rage and heavy weapon pressure."
+      description: "STR/CON bruiser with Rage and Reckless Attack pressure."
     },
     ranger: {
       title: "Ranger",
@@ -444,7 +444,7 @@
       bonus: "sneak",
       gear: ["travel cloak"],
       abilities: ["hunters_mark"],
-      description: "DEX/WIS striker with accurate attacks and prey marking."
+      description: "DEX/WIS striker with Longbow attacks and Hunter's Mark."
     },
     scholar: {
       title: "Warlock",
@@ -458,7 +458,7 @@
       bonus: "persuasion",
       gear: ["old journal"],
       abilities: ["eldritch_bolt", "drain_life"],
-      description: "CHA caster with the deepest mana pool and life-draining magic."
+      description: "CHA caster with Eldritch Blast and life-draining magic."
     },
     dwarf: {
       title: "Fighter",
@@ -472,7 +472,7 @@
       bonus: "lore",
       gear: ["stone token"],
       abilities: ["second_wind"],
-      description: "Weapon master with sturdy defenses and a self-heal."
+      description: "Weapon master with Battleaxe attacks, maneuvers, and Second Wind."
     }
   };
 
@@ -483,7 +483,7 @@
       bonuses: { str: 2, con: 1 },
       maxHealth: 4,
       ability: "stone_endurance",
-      description: "+2 STR, +1 CON, +4 HP, Stone Endurance."
+      description: "+2 STR, +1 CON, +4 HP, Stone's Endurance."
     },
     elf: {
       name: "Elf",
@@ -491,7 +491,7 @@
       bonuses: { dex: 2, wis: 1 },
       attackBonus: 1,
       ability: "elven_focus",
-      description: "+2 DEX, +1 WIS, +1 attack chance, Elven Focus."
+      description: "+2 DEX, +1 WIS, +1 attack chance, Elven Accuracy."
     },
     human: {
       name: "Human",
@@ -499,7 +499,7 @@
       bonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
       mana: 2,
       ability: "human_resolve",
-      description: "+1 to every stat, +2 mana, Human Resolve."
+      description: "+1 to every stat, +2 mana, Resourceful."
     },
     dwarf: {
       name: "Dwarf",
@@ -507,7 +507,7 @@
       bonuses: { con: 2, str: 1 },
       ac: 1,
       ability: "dwarven_guard",
-      description: "+2 CON, +1 STR, +1 AC, Dwarven Guard."
+      description: "+2 CON, +1 STR, +1 AC, Dwarven Toughness."
     }
   };
 
@@ -528,7 +528,7 @@
       attackBonus: 1,
       attacks: 1,
       skill: "pinning_shot",
-      description: "d8 damage, +1 attack chance, +1 attack speed, grants Pinning Shot."
+      description: "d8 damage, +1 attack chance, +1 attack speed, grants Ensnaring Strike."
     },
     battleaxe: {
       name: "Battleaxe and Shield",
@@ -538,7 +538,7 @@
       ac: 1,
       attacks: 0,
       skill: "shield_bash",
-      description: "d8 damage, +1 AC, grants Shield Bash."
+      description: "d8 damage, +1 AC, grants Shield Master Shove."
     },
     eldritch_focus: {
       name: "Eldritch Focus",
@@ -549,24 +549,24 @@
       skill: "hex_bolt",
       attackStat: "cha",
       damageStat: "cha",
-      description: "d10 spell damage, +1 damage, uses CHA, grants Hex Bolt."
+      description: "d10 spell damage, +1 damage, uses CHA, grants Hex."
     }
   };
 
   const betaPowers = {
-    rage: { name: "Rage", cost: 3, type: "buff", turns: 3, text: "Rage burns through your muscles. For three turns, your attacks deal +2 damage." },
-    hunters_mark: { name: "Hunter's Mark", cost: 4, type: "attack", attackBonus: 2, damageBonus: 3, text: "You mark the weakest opening and strike with cruel precision." },
-    eldritch_bolt: { name: "Eldritch Bolt", cost: 3, type: "spell", damageDie: 10, attackBonus: 1, damageBonus: 2, text: "A violet bolt snaps from your focus." },
-    drain_life: { name: "Drain Life", cost: 5, type: "spell", damageDie: 8, attackBonus: 0, damageBonus: 1, healHalf: true, text: "You tear warmth out of the enemy and drag it into your lungs." },
-    second_wind: { name: "Second Wind", cost: 4, type: "heal", healDie: 8, healBonus: 8, text: "You grit your teeth, reset your stance, and pull yourself back together." },
-    stone_endurance: { name: "Stone Endurance", cost: 3, type: "guard", acBonus: 4, text: "Your skin hardens like cliff stone until the enemy turn ends." },
-    elven_focus: { name: "Elven Focus", cost: 2, type: "attack", attackBonus: 3, damageBonus: 0, text: "Your breathing slows and the world narrows to one clean strike." },
-    human_resolve: { name: "Human Resolve", cost: 2, type: "restore", manaRestore: 4, text: "You steady yourself and claw back a little power." },
-    dwarven_guard: { name: "Dwarven Guard", cost: 2, type: "guard", acBonus: 3, text: "You lock your guard and dare the enemy to move you." },
+    rage: { name: "Rage", cost: 3, type: "buff", turns: 3, text: "You enter a barbarian rage. For three turns, your attacks deal +2 damage." },
+    hunters_mark: { name: "Hunter's Mark", cost: 4, type: "attack", attackBonus: 2, damageBonus: 3, text: "You mark your prey and strike the weakest opening." },
+    eldritch_bolt: { name: "Witch Bolt", cost: 3, type: "spell", damageDie: 12, attackBonus: 1, damageBonus: 2, text: "A crackling beam lashes from your focus." },
+    drain_life: { name: "Vampiric Touch", cost: 5, type: "spell", damageDie: 8, attackBonus: 0, damageBonus: 1, healHalf: true, text: "Necrotic power tears warmth from the enemy and drags it back into you." },
+    second_wind: { name: "Second Wind", cost: 4, type: "heal", healDie: 8, healBonus: 8, text: "You draw on a fighter's reserve and pull yourself back together." },
+    stone_endurance: { name: "Stone's Endurance", cost: 3, type: "guard", acBonus: 4, text: "Stone-hard resilience carries you through the enemy turn." },
+    elven_focus: { name: "Elven Accuracy", cost: 2, type: "attack", attackBonus: 3, damageBonus: 0, text: "You focus with impossible elven precision." },
+    human_resolve: { name: "Resourceful", cost: 2, type: "restore", manaRestore: 4, text: "You steady yourself and find one more reserve of power." },
+    dwarven_guard: { name: "Dwarven Toughness", cost: 2, type: "guard", acBonus: 3, text: "You plant your feet and endure like stone." },
     cleave: { name: "Cleave", cost: 3, type: "cleave", attackBonus: -1, damageBonus: 2, text: "You swing wide, trying to carry the blow into a second foe." },
-    pinning_shot: { name: "Pinning Shot", cost: 4, type: "attack", attackBonus: 2, damageBonus: 1, guard: true, text: "The shot pins the enemy's movement and buys you space." },
-    shield_bash: { name: "Shield Bash", cost: 2, type: "attack", damageDie: 6, attackBonus: 1, damageBonus: 1, guard: true, text: "You crash forward behind the shield." },
-    hex_bolt: { name: "Hex Bolt", cost: 3, type: "spell", damageDie: 12, attackBonus: 1, damageBonus: 3, text: "The focus spits a black-edged curse." }
+    pinning_shot: { name: "Ensnaring Strike", cost: 4, type: "attack", attackBonus: 2, damageBonus: 1, guard: true, text: "Vines of conjured force snare the enemy and buy you space." },
+    shield_bash: { name: "Shield Master Shove", cost: 2, type: "attack", damageDie: 6, attackBonus: 1, damageBonus: 1, guard: true, text: "You drive forward behind the shield and break their footing." },
+    hex_bolt: { name: "Hex", cost: 3, type: "spell", damageDie: 10, attackBonus: 1, damageBonus: 3, text: "You curse the target and feed the spell through your blast." }
   };
 
   const betaAttributeHelp = {
@@ -579,10 +579,10 @@
   };
 
   const betaClassCombatLabels = {
-    warrior: { attack: "Reckless Chop", heavy: "Crushing Overhand" },
-    ranger: { attack: "Quick Shot", heavy: "Aimed Shot" },
-    scholar: { attack: "Eldritch Jab", heavy: "Focused Blast" },
-    dwarf: { attack: "Shielded Strike", heavy: "Power Cleave" }
+    warrior: { attack: "Greataxe Attack", heavy: "Reckless Attack" },
+    ranger: { attack: "Longbow Attack", heavy: "Sharpshooter Shot" },
+    scholar: { attack: "Eldritch Blast", heavy: "Agonizing Blast" },
+    dwarf: { attack: "Battleaxe Attack", heavy: "Menacing Attack" }
   };
 
   const monsterStats = {
@@ -1945,6 +1945,8 @@
         bridgeRoute: randomBridgeRoute(),
         bridgeNavigationStep: 0,
         districtsRested: false,
+        largeManorCleared: false,
+        mimicHouseCleared: false,
         smallShackCleared: false,
         bridgeXpAwarded: false,
         bridgeRested: false,
@@ -3298,16 +3300,19 @@
   }
 
   function residentialChoices() {
-    const choices = [
-      choice(t("choice.large_manor"), () => {
+    const choices = [];
+    if (!state.player.flags.largeManorCleared) {
+      choices.push(choice(t("choice.large_manor"), () => {
         awardDecisionXp("residential_choice");
         largeManor();
-      }),
-      choice(t("choice.large_house"), () => {
+      }));
+    }
+    if (!state.player.flags.mimicHouseCleared) {
+      choices.push(choice(t("choice.large_house"), () => {
         awardDecisionXp("residential_choice");
         mimicHouse();
-      })
-    ];
+      }));
+    }
     if (!state.player.flags.smallShackCleared) {
       choices.splice(1, 0, choice(t("choice.small_shack"), () => {
         awardDecisionXp("residential_choice");
@@ -3342,7 +3347,7 @@
       setChoices([
         choice(t("choice.attack_them"), manorCombat),
         choice(t("choice.sneak_past"), manorSneak),
-        choice(t("choice.proceed_bridge"), goBridge)
+        choice(t("choice.return_street"), returnToResidentialStreet)
       ]);
     } else {
       writeKey("story.large_manor_grouped");
@@ -3355,7 +3360,7 @@
     setChoices([
       choice(t("choice.attack_them"), manorCombat),
       choice(t("choice.loot_manor"), manorLoot),
-      choice(t("choice.proceed_bridge"), goBridge)
+      choice(t("choice.return_street"), returnToResidentialStreet)
     ]);
   }
 
@@ -3374,7 +3379,7 @@
     startCombat(["goblin", "goblin", "goblin", "goblin", "goblin", "orc", "orc"], "story.manor_combat_victory", {
       attackersPerRound: 1,
       onWin: manorWin,
-      onRun: goBridge
+      onRun: returnToResidentialStreet
     });
   }
 
@@ -3391,12 +3396,12 @@
   function manorLootChoices(includeRest) {
     const choices = [
       choice(t("choice.use_keys_chest"), manorChestKeys),
-      choice(t("choice.leave_found"), goBridge),
+      choice(t("choice.leave_found"), completeLargeManor),
       choice(t("choice.store_keys_chest"), () => {
         addItem("unmarked keys");
         addItem("small black chest");
         writeKey("story.manor_store_chest");
-        setChoices([choice(t("choice.leave_house"), goBridge)]);
+        setChoices([choice(t("choice.leave_house"), completeLargeManor)]);
       })
     ];
     if (includeRest) {
@@ -3420,10 +3425,12 @@
         unlock("correct_chest_key");
         writeKey("story.manor_chest_unlock");
         setChoices([choice(t("choice.open_chest"), () => {
-          state.player.flags.hasMagistoneOrb = true;
-          addItem("magistone orb");
+          if (!state.player.flags.hasMagistoneOrb && !state.player.flags.magistoneOrbSpent) {
+            state.player.flags.hasMagistoneOrb = true;
+            addItem("magistone orb");
+          }
           writeKey("story.manor_magistone_orb");
-          setChoices([choice(t("choice.leave_house"), goBridge)]);
+          setChoices([choice(t("choice.leave_house"), completeLargeManor)]);
         })]);
       } else {
         writeKey("story.manor_chest_trap");
@@ -3432,6 +3439,11 @@
         gameOver();
       }
     })));
+  }
+
+  function completeLargeManor() {
+    state.player.flags.largeManorCleared = true;
+    returnToResidentialStreet();
   }
 
   function smallShack() {
@@ -3456,11 +3468,11 @@
       choice(t("choice.burn_house"), () => {
         unlock("pyromaniac");
         writeKey("story.mimic_house_burn");
-        setChoices([choice(t("choice.leave_house"), goBridge)]);
+        setChoices([choice(t("choice.leave_house"), completeMimicHouse)]);
       }),
       choice(t("choice.leave_immediately"), () => {
         writeKey("story.mimic_house_leave");
-        goBridge();
+        completeMimicHouse();
       }),
       choice(t("choice.loot_chests"), () => {
         writeKey("story.mimic_house_loot");
@@ -3498,11 +3510,13 @@
       attackersPerRound: 2,
       deathReason: "mimic",
       onWin: () => {
-        state.player.flags.hasMagistoneOrb = true;
-        addItem("magistone orb");
+        if (!state.player.flags.hasMagistoneOrb && !state.player.flags.magistoneOrbSpent) {
+          state.player.flags.hasMagistoneOrb = true;
+          addItem("magistone orb");
+        }
         if (state.player.flags.hasThroneMap) {
           writeKey("story.mimic_house_escape_full_map");
-        } else {
+        } else if (!state.player.flags.hasPartialMap) {
           state.player.flags.hasPartialMap = true;
           addItem("torn bridge map");
           writeKey("story.mimic_house_escape", {
@@ -3528,7 +3542,7 @@
     if (Math.random() < successChance) {
       writeKey(`story.mimic_house_tongue_${method}_success`);
       unlock("mimic_survivor");
-      setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
+      setChoices([choice(t("choice.return_street"), completeMimicHouse)]);
       return;
     }
     writeKey(`story.mimic_house_tongue_${method}_fail`);
@@ -3548,7 +3562,7 @@
       }),
       choice(mimicFireChoiceLabel(), () => {
         writeKey(`story.mimic_house_fire_${mimicFireVariant()}`);
-        setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
+        setChoices([choice(t("choice.return_street"), completeMimicHouse)]);
       }),
       choice(t("choice.attack_walls"), () => {
         writeKey("story.mimic_house_walls");
@@ -3562,7 +3576,7 @@
         removeItem("dwarven ale");
         unlock("ale_chemistry");
         writeKey("story.mimic_house_ale");
-        setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
+        setChoices([choice(t("choice.return_street"), completeMimicHouse)]);
       }));
     }
     setChoices(options);
@@ -3597,6 +3611,15 @@
 
   function mimicFireChoiceLabel() {
     return t(`choice.mimic_fire_${mimicFireVariant()}`);
+  }
+
+  function completeMimicHouse() {
+    state.player.flags.mimicHouseCleared = true;
+    returnToResidentialStreet();
+  }
+
+  function returnToResidentialStreet() {
+    continueChapter("residential", true);
   }
 
   function goBridge() {
@@ -4711,6 +4734,9 @@
     if (heavy) {
       return `One attack at d${stats.damageDie + 4} + ${stats.damageBonus} damage with ${stats.attackBonus - 1 >= 0 ? "+" : ""}${stats.attackBonus - 1} to hit.`;
     }
+    if (state.player.class === "scholar") {
+      return `${stats.attacks} Eldritch Blast beam${stats.attacks === 1 ? "" : "s"} at d${stats.damageDie} + ${stats.damageBonus} damage with ${stats.attackBonus >= 0 ? "+" : ""}${stats.attackBonus} to hit. Eldritch Blast fires 2 beams at level 5, 3 at level 11, and 4 at level 17.`;
+    }
     return `${stats.attacks} attack${stats.attacks === 1 ? "" : "s"} at d${stats.damageDie} + ${stats.damageBonus} damage with ${stats.attackBonus >= 0 ? "+" : ""}${stats.attackBonus} to hit.`;
   }
 
@@ -5083,8 +5109,22 @@
       attackBonus: base.attackBonus,
       damageDie: base.damageDie,
       damageBonus: base.damageBonus + state.player.upgrades.damage,
-      attacks: base.attacks
+      attacks: state.player.class === "scholar" ? eldritchBlastBeamCount() : base.attacks
     };
+  }
+
+  function eldritchBlastBeamCount() {
+    const level = state.player ? state.player.level : BASE_LEVEL;
+    if (level >= 17) {
+      return 4;
+    }
+    if (level >= 11) {
+      return 3;
+    }
+    if (level >= 5) {
+      return 2;
+    }
+    return 1;
   }
 
   function betaCombatStats() {
@@ -5092,14 +5132,15 @@
     const race = betaRaces[state.player.raceKey] || { bonuses: {} };
     const weapon = betaWeapons[state.player.weaponKey] || betaWeapons.greataxe;
     const attributes = state.player.attributes || {};
-    const attackStat = weapon.attackStat || build.attackStat;
-    const damageStat = weapon.damageStat || build.damageStat;
+    const isWarlock = state.player.class === "scholar";
+    const attackStat = isWarlock ? "cha" : weapon.attackStat || build.attackStat;
+    const damageStat = isWarlock ? "cha" : weapon.damageStat || build.damageStat;
     return {
       ac: build.acBase + betaModifier(attributes.dex || 10) + (race.ac || 0) + (weapon.ac || 0) + state.player.upgrades.ac,
-      attackBonus: 3 + betaModifier(attributes[attackStat] || 10) + (race.attackBonus || 0) + (weapon.attackBonus || 0),
-      damageDie: weapon.damageDie,
-      damageBonus: betaModifier(attributes[damageStat] || 10) + (weapon.damageBonus || 0) + state.player.upgrades.damage,
-      attacks: Math.max(1, build.attacks + (weapon.attacks || 0))
+      attackBonus: 3 + betaModifier(attributes[attackStat] || 10) + (race.attackBonus || 0) + (isWarlock ? 0 : weapon.attackBonus || 0),
+      damageDie: isWarlock ? 10 : weapon.damageDie,
+      damageBonus: betaModifier(attributes[damageStat] || 10) + (isWarlock ? 0 : weapon.damageBonus || 0) + state.player.upgrades.damage,
+      attacks: state.player.class === "scholar" ? eldritchBlastBeamCount() : Math.max(1, build.attacks + (weapon.attacks || 0))
     };
   }
 
@@ -6104,6 +6145,12 @@
     }
     if (state.player.flags.cleanGetawayDistrict === undefined) {
       state.player.flags.cleanGetawayDistrict = false;
+    }
+    if (state.player.flags.largeManorCleared === undefined) {
+      state.player.flags.largeManorCleared = false;
+    }
+    if (state.player.flags.mimicHouseCleared === undefined) {
+      state.player.flags.mimicHouseCleared = false;
     }
     if (state.player.flags.smallShackCleared === undefined) {
       state.player.flags.smallShackCleared = false;
