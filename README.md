@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.7**
+Current version: **0.9.8**
 
 ## Community
 
@@ -36,7 +36,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.9.7 extends Jon the DM through the current finale, adds narrated DM coverage for the orc camps, Wazetax, castle, throne room, Obliviarch, and ending, and keeps the live/beta/Twine story paths aligned.
+Version 0.9.8 adds Wazetax feedback updates: music volume control and normalization, character-specific mimic-house fire outcomes, non-destructive save notices, slightly harder warehouse leader combat, and visible public-name limits/validation. Version 0.9.7 extended Jon the DM through the current finale and kept the live/beta/Twine story paths aligned.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
