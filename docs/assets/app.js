@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.15";
+  const VERSION = "0.9.16";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
@@ -1435,14 +1435,17 @@
       infinitedamage: { key: "damage", label: "Infinite Damage" },
       infiniteattackchance: { key: "attack", label: "Infinite Attack Chance" },
       infiniteexp: { key: "exp", label: "Infinite EXP" },
-      infiniteexperience: { key: "exp", label: "Infinite EXP" }
+      infiniteexperience: { key: "exp", label: "Infinite EXP" },
+      all: { keys: ["health", "mana", "ac", "damage", "attack", "exp"], label: "All Cheats" }
     };
     const cheat = cheatMap[normalized];
     if (!cheat) {
       writeKey("story.cheat_unknown");
       return false;
     }
-    state.player.cheats[cheat.key] = true;
+    (cheat.keys || [cheat.key]).forEach((key) => {
+      state.player.cheats[key] = true;
+    });
     unlock("cheater");
     applyCheatSustain();
     writeKey("story.cheat_enabled", { cheat: cheat.label });
