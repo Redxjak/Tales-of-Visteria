@@ -9,3 +9,5 @@ build/
 savegame.json
 player_stats.json
 LOCAL_TOV_PROJECT_NOTES.md
+http-server*.log
+ToV Resources/
