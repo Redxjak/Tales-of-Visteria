@@ -50,10 +50,26 @@
     combat: `${ASSET_BASE}/audio/medieval_epic.mp3`
   };
   const MUSIC_VOLUMES = {
-    normal: 0.42,
+    normal: 0.36,
     low: 0.24,
-    combat: 0.5
+    combat: 0.34
   };
+  const NAME_MAX_LENGTH = 32;
+  const PUBLIC_NAME_DENYLIST = [
+    "nigger",
+    "nigga",
+    "fag",
+    "faggot",
+    "kike",
+    "spic",
+    "chink",
+    "gook",
+    "wetback",
+    "tranny",
+    "nazi",
+    "hitler",
+    "kkk"
+  ];
   const GAME_OVER_IMAGES = {
     hydra: { file: "false_hydra.png", alt: "False hydra" },
     false_hydra: { file: "obliviarch.png", alt: "Obliviarch" },
@@ -180,7 +196,12 @@
       emptyLog: "No story log yet.",
       moveOn: "Move on",
       musicOn: "Music: On",
-      musicOff: "Music: Off"
+      musicOff: "Music: Off",
+      musicVolume: "Music volume",
+      nameLimit: "{count}/{max} characters",
+      nameRequired: "Enter a name.",
+      nameTooLong: "Names must be {max} characters or fewer.",
+      nameBlocked: "Choose a different public name."
     },
     es: {
       english: "English",
@@ -259,7 +280,12 @@
       emptyLog: "Todavia no hay registro.",
       moveOn: "Continuar",
       musicOn: "Musica: Si",
-      musicOff: "Musica: No"
+      musicOff: "Musica: No",
+      musicVolume: "Volumen de musica",
+      nameLimit: "{count}/{max} caracteres",
+      nameRequired: "Escribe un nombre.",
+      nameTooLong: "Los nombres deben tener {max} caracteres o menos.",
+      nameBlocked: "Elige otro nombre publico."
     }
   };
   const ui = uiTextByLanguage[lang] || uiTextByLanguage.en;
@@ -738,8 +764,11 @@
       audio: null,
       enabled: loadMusicEnabled(),
       current: "silence",
-      volume: MUSIC_VOLUMES.normal
+      volume: MUSIC_VOLUMES.normal,
+      userVolume: loadMusicVolume()
     },
+    notice: "",
+    noticeTimer: null,
     choices: []
   };
 
@@ -804,6 +833,10 @@
             </div>
           </details>
           <button id="music-button" class="utility-button music-button" type="button"></button>
+          <label class="music-volume-control" for="music-volume">
+            <span>${ui.musicVolume}</span>
+            <input id="music-volume" type="range" min="0" max="100" step="1">
+          </label>
           <button id="log-button" class="utility-button" type="button">${ui.log}</button>
           <details id="info-menu" class="mobile-info-menu">
             <summary>${ui.info}</summary>
@@ -814,6 +847,7 @@
           </details>
         </div>
         <div id="status" class="status"></div>
+        <div id="notice" class="notice" hidden></div>
       </header>
       <section class="layout">
         <aside class="side-panel player-panel" data-mobile-panel-name="character">
@@ -862,6 +896,8 @@
           <h2 id="prompt-modal-title"></h2>
           <p id="prompt-modal-body"></p>
           <input id="prompt-modal-input" class="modal-input" autocomplete="off">
+          <div id="prompt-modal-helper" class="modal-helper"></div>
+          <div id="prompt-modal-error" class="modal-error" role="alert"></div>
           <div class="modal-choices">
             <button id="prompt-modal-submit" class="choice" type="submit"></button>
             <button id="prompt-modal-cancel" class="choice choice-secondary" type="button"></button>
@@ -948,6 +984,11 @@
       document.getElementById("story").appendChild(img);
     }
     document.getElementById("status").textContent = statusText();
+    const notice = document.getElementById("notice");
+    if (notice) {
+      notice.textContent = state.notice;
+      notice.hidden = !state.notice;
+    }
     document.getElementById("account-status").textContent = accountStatusText();
     bindAccountMenu();
     document.getElementById("sheet").innerHTML = sheetText();
@@ -1030,6 +1071,8 @@
     }
     const form = document.getElementById("prompt-form");
     const input = document.getElementById("prompt-modal-input");
+    const helper = document.getElementById("prompt-modal-helper");
+    const error = document.getElementById("prompt-modal-error");
     document.getElementById("prompt-modal-title").textContent = dialog.title;
     document.getElementById("prompt-modal-body").textContent = dialog.body || "";
     document.getElementById("prompt-modal-submit").textContent = dialog.confirmLabel || ui.promptContinue;
@@ -1038,14 +1081,55 @@
     input.type = dialog.password ? "password" : "text";
     input.value = dialog.value || "";
     input.placeholder = dialog.placeholder || "";
+    input.maxLength = dialog.maxLength || 524288;
+    if (helper) {
+      helper.hidden = !dialog.input || !dialog.maxLength;
+      helper.textContent = dialog.maxLength ? format(ui.nameLimit, { count: input.value.length, max: dialog.maxLength }) : "";
+    }
+    if (error) {
+      error.textContent = dialog.error || "";
+      error.hidden = !dialog.error;
+    }
+    input.oninput = () => {
+      dialog.value = input.value;
+      dialog.error = "";
+      if (helper && dialog.maxLength) {
+        helper.textContent = format(ui.nameLimit, { count: input.value.length, max: dialog.maxLength });
+      }
+      if (error) {
+        error.textContent = "";
+        error.hidden = true;
+      }
+    };
     form.onsubmit = (event) => {
       event.preventDefault();
-      closePromptDialog(dialog.input ? input.value.trim() : true);
+      submitPromptDialog(dialog.input ? input.value : true);
     };
     document.getElementById("prompt-modal-cancel").onclick = () => closePromptDialog("");
     if (dialog.input) {
       setTimeout(() => input.focus(), 0);
     }
+  }
+
+  function submitPromptDialog(value) {
+    const dialog = state.promptDialog;
+    if (!dialog) {
+      return;
+    }
+    let nextValue = value;
+    if (dialog.input) {
+      nextValue = typeof dialog.normalize === "function" ? dialog.normalize(value) : value.trim();
+    }
+    if (typeof dialog.validate === "function") {
+      const validationError = dialog.validate(nextValue);
+      if (validationError) {
+        dialog.value = value;
+        dialog.error = validationError;
+        render();
+        return;
+      }
+    }
+    closePromptDialog(nextValue);
   }
 
   function closePromptDialog(value) {
@@ -1087,7 +1171,7 @@
       state.music.audio.loop = true;
       state.music.audio.preload = "auto";
     }
-    state.music.audio.volume = nextVolume;
+    state.music.audio.volume = effectiveMusicVolume(nextVolume);
     const playAttempt = state.music.audio.play();
     if (playAttempt && typeof playAttempt.catch === "function") {
       playAttempt.catch(() => {});
@@ -1113,6 +1197,21 @@
     }
   }
 
+  function effectiveMusicVolume(baseVolume = state.music.volume) {
+    return Math.max(0, Math.min(1, baseVolume * state.music.userVolume));
+  }
+
+  function updateMusicVolume(value) {
+    const parsed = Number(value);
+    const nextVolume = Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) / 100 : 1;
+    state.music.userVolume = nextVolume;
+    localStorage.setItem(`${storagePrefix}musicVolume`, String(Math.round(nextVolume * 100)));
+    if (state.music.audio) {
+      state.music.audio.volume = effectiveMusicVolume();
+    }
+    syncMusicButton();
+  }
+
   function bindFirstGestureAudio() {
     const unlock = () => {
       if (state.music.enabled && state.music.current !== "silence") {
@@ -1127,12 +1226,19 @@
 
   function syncMusicButton() {
     const button = document.getElementById("music-button");
+    const slider = document.getElementById("music-volume");
     if (!button) {
       return;
     }
     button.textContent = state.music.enabled ? ui.musicOn : ui.musicOff;
     button.classList.toggle("is-muted", !state.music.enabled);
     button.onclick = toggleMusic;
+    if (slider) {
+      slider.value = String(Math.round(state.music.userVolume * 100));
+      slider.disabled = !state.music.enabled;
+      slider.setAttribute("aria-label", ui.musicVolume);
+      slider.oninput = (event) => updateMusicVolume(event.target.value);
+    }
   }
 
   function restoreChapterMusic(volume = MUSIC_VOLUMES.normal) {
@@ -1514,11 +1620,13 @@
 
   async function createAccount() {
     const displayName = await promptText(ui.displayNamePrompt, "", {
-      title: ui.createAccount
+      title: ui.createAccount,
+      ...namePromptOptions({ publicName: true })
     });
     if (!displayName) {
       return;
     }
+    const cleanDisplayName = normalizeName(displayName);
     const email = await promptText(ui.emailPrompt, "", {
       title: ui.createAccount,
       placeholder: "you@example.com"
@@ -1537,10 +1645,10 @@
       const session = await authRequest("signup", {
         email,
         password,
-        data: { display_name: displayName }
+        data: { display_name: cleanDisplayName }
       });
       if (session.access_token) {
-        setAuthenticatedAccount(session, displayName);
+        setAuthenticatedAccount(session, cleanDisplayName);
         if (await ensureBetaAccess()) {
           await saveProfile();
           await saveCloudData();
@@ -1548,7 +1656,7 @@
         }
       } else {
         state.account = {
-          name: displayName.trim().slice(0, 32),
+          name: cleanDisplayName,
           email,
           guest: false,
           pendingConfirmation: true
@@ -1634,14 +1742,15 @@
     setMusic("ambient");
     const previousName = state.account && state.account.name && state.account.name !== ui.guest ? state.account.name : "";
     const name = await promptText("Character name:", previousName, {
-      title: "Create Custom Character"
+      title: "Create Custom Character",
+      ...namePromptOptions()
     });
     if (!name) {
       showStart();
       return;
     }
     state.betaCreator = {
-      name: name.slice(0, 32)
+      name: normalizeName(name)
     };
     showBetaRaceSelect();
   }
@@ -3437,8 +3546,8 @@
         state.player.health = 0;
         gameOver();
       }),
-      choice(t("choice.cast_fire"), () => {
-        writeKey("story.mimic_house_fire");
+      choice(mimicFireChoiceLabel(), () => {
+        writeKey(`story.mimic_house_fire_${mimicFireVariant()}`);
         setChoices([choice(t("choice.proceed_bridge"), goBridge)]);
       }),
       choice(t("choice.attack_walls"), () => {
@@ -3457,6 +3566,37 @@
       }));
     }
     setChoices(options);
+  }
+
+  function mimicFireVariant() {
+    if (!state.player) {
+      return "spark";
+    }
+    if (state.player.class === "warrior") {
+      return "torch";
+    }
+    if (state.player.class === "ranger") {
+      return "flare";
+    }
+    if (state.player.class === "scholar") {
+      return "cantrip";
+    }
+    if (state.player.class === "dwarf") {
+      return "lantern";
+    }
+    if (state.player.betaCustom) {
+      if (state.player.class === "ranger" || state.player.weaponKey === "longbow") {
+        return "flare";
+      }
+      if (state.player.class === "scholar" || state.player.weaponKey === "eldritch_focus") {
+        return "cantrip";
+      }
+    }
+    return "spark";
+  }
+
+  function mimicFireChoiceLabel() {
+    return t(`choice.mimic_fire_${mimicFireVariant()}`);
   }
 
   function goBridge() {
@@ -3668,8 +3808,8 @@
     } else {
       writeKey("story.warehouse_leader_rage_no_doll");
     }
-    startCombat(["ritualLeader"], "story.warehouse_leader_defeated", {
-      attackersPerRound: 1,
+    startCombat(["ritualLeader", "cultist"], "story.warehouse_leader_defeated", {
+      attackersPerRound: 2,
       deathReason: "warehouse",
       onWin: () => {
         state.player.flags.warehouseStage = "leader_defeated";
@@ -5413,12 +5553,13 @@
     }
     const previousName = preferredLeaderboardName();
     const playerName = await promptText(ui.playerNamePrompt, previousName, {
-      title: ui.submitScore
+      title: ui.submitScore,
+      ...namePromptOptions({ publicName: true })
     });
     if (!playerName) {
       return;
     }
-    const cleanName = playerName.trim().slice(0, 32);
+    const cleanName = normalizeName(playerName);
     if (!cleanName) {
       return;
     }
@@ -5619,7 +5760,7 @@
   function setAuthenticatedAccount(session, fallbackName = "") {
     const user = session.user || state.account || {};
     const metadataName = user.user_metadata ? user.user_metadata.display_name : "";
-    const name = (metadataName || fallbackName || state.account?.name || user.email || ui.guest).trim().slice(0, 32);
+    const name = normalizeName(metadataName || fallbackName || state.account?.name || user.email || ui.guest).slice(0, NAME_MAX_LENGTH);
     state.account = {
       id: user.id || state.account?.id || "",
       email: user.email || state.account?.email || "",
@@ -5991,8 +6132,21 @@
     if (state.player) {
       localStorage.setItem(`${storagePrefix}${lang}.save`, JSON.stringify(state.player));
       saveCloudData();
-      writeKey("ui.game_saved");
+      showNotice(t("ui.game_saved"));
     }
+  }
+
+  function showNotice(message) {
+    state.notice = message;
+    if (state.noticeTimer) {
+      window.clearTimeout(state.noticeTimer);
+    }
+    state.noticeTimer = window.setTimeout(() => {
+      state.notice = "";
+      state.noticeTimer = null;
+      render();
+    }, 2400);
+    render();
   }
 
   function loadGame() {
@@ -6046,6 +6200,10 @@
         password: Boolean(options.password),
         value: fallback || "",
         placeholder: options.placeholder || "",
+        maxLength: options.maxLength || null,
+        normalize: options.normalize || null,
+        validate: options.validate || null,
+        error: "",
         confirmLabel: options.confirmLabel || ui.promptContinue,
         cancelLabel: options.cancelLabel || ui.promptCancel,
         resolve
@@ -6068,6 +6226,37 @@
     });
   }
 
+  function namePromptOptions(options = {}) {
+    return {
+      maxLength: NAME_MAX_LENGTH,
+      normalize: normalizeName,
+      validate: (value) => validateName(value, options)
+    };
+  }
+
+  function normalizeName(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  function validateName(value, options = {}) {
+    const cleanName = normalizeName(value);
+    if (!cleanName) {
+      return ui.nameRequired;
+    }
+    if (cleanName.length > NAME_MAX_LENGTH) {
+      return format(ui.nameTooLong, { max: NAME_MAX_LENGTH });
+    }
+    if (options.publicName && isBlockedPublicName(cleanName)) {
+      return ui.nameBlocked;
+    }
+    return "";
+  }
+
+  function isBlockedPublicName(value) {
+    const normalized = normalizeName(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+    return PUBLIC_NAME_DENYLIST.some((blocked) => normalized.includes(blocked));
+  }
+
   function loadJson(key, fallback) {
     try {
       return JSON.parse(localStorage.getItem(`${storagePrefix}${key}`)) || fallback;
@@ -6082,6 +6271,18 @@
       return saved === null ? true : JSON.parse(saved) !== false;
     } catch {
       return true;
+    }
+  }
+
+  function loadMusicVolume() {
+    try {
+      const saved = Number(localStorage.getItem(`${storagePrefix}musicVolume`));
+      if (!Number.isFinite(saved)) {
+        return 1;
+      }
+      return Math.max(0, Math.min(100, saved)) / 100;
+    } catch {
+      return 1;
     }
   }
 
