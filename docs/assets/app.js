@@ -1,13 +1,14 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.11";
+  const VERSION = "0.9.12";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
   const XP_PER_LEVEL = 50;
+  const CHEAT_STAT_VALUE = 999999;
   const CUSTOM_CHARACTER_SCHEMA_VERSION = "custom-character-v1";
   const CUSTOM_ATTRIBUTES = ["str", "dex", "con", "int", "wis", "cha"];
   const SUPABASE_URL = "https://fojkijwketpzxsbikmsl.supabase.co";
@@ -59,7 +60,8 @@
   ];
   const GAME_OVER_IMAGES = {
     hydra: { file: "false_hydra.png", alt: "False hydra" },
-    false_hydra: { file: "obliviarch.png", alt: "Obliviarch" },
+    false_hydra: { file: "false_hydra.png", alt: "False hydra" },
+    obliviarch: { file: "obliviarch.png", alt: "Obliviarch" },
     mask_corruption: { file: "obliviarch.png", alt: "Obliviarch" }
   };
   const CHAPTER_MUSIC = {
@@ -170,6 +172,7 @@
       discord: "Discord",
       suggest: "Suggest",
       reportIssue: "Report Issue",
+      cheatCodes: "Cheat Codes",
       log: "Log",
       closeLog: "Close",
       emptyLog: "No story log yet.",
@@ -246,6 +249,7 @@
       discord: "Discord",
       suggest: "Sugerir",
       reportIssue: "Reportar problema",
+      cheatCodes: "Codigos de trampa",
       log: "Registro",
       closeLog: "Cerrar",
       emptyLog: "Todavia no hay registro.",
@@ -269,6 +273,9 @@
     "story.level_up_body_mana": "+4 Health, +4 Mana\nChoose your level up reward.",
     "choice.level_mana": "Gain Mana",
     "choice.level_attribute": "Gain Attribute",
+    "story.cheat_prompt": "Enter a cheat code.",
+    "story.cheat_unknown": "That cheat code does nothing.",
+    "story.cheat_enabled": "Cheat enabled: {cheat}.",
     "story.level_mana": "Your maximum mana increases by another 4, and power returns to you.",
     "story.level_attribute": "{attribute} increases to {value}.",
     "story.level_attribute_unavailable": "Only custom characters can increase attributes."
@@ -578,7 +585,7 @@
     mimic: { name: "Mimic", ac: 12, hp: 35, attackBonus: 5, damageDie: 8, damageBonus: 3, xp: 45 },
     cultist: { name: "Masked Cultist", ac: 13, hp: 12, attackBonus: 4, damageDie: 6, damageBonus: 2, xp: 25 },
     ritualLeader: { name: "Cultist Leader", ac: 15, hp: 42, attackBonus: 7, damageDie: 10, damageBonus: 4, xp: 90 },
-    falseHydra: { name: "Obliviarch", ac: 19, hp: 350, attackBonus: 14, damageDie: 10, damageBonus: 8, xp: 155000 },
+    falseHydra: { name: "False Hydra", ac: 19, hp: 350, attackBonus: 14, damageDie: 10, damageBonus: 8, xp: 155000 },
     obliviarchPhaseOne: { name: "Obliviarch", ac: 17, hp: 140, attackBonus: 9, damageDie: 10, damageBonus: 6, xp: 175 },
     obliviarchPhaseTwo: { name: "Wounded Obliviarch", ac: 16, hp: 95, attackBonus: 7, damageDie: 8, damageBonus: 5, xp: 250 }
   };
@@ -618,6 +625,7 @@
       ale_chemistry: "Ale Chemistry",
       clean_getaway: "Clean Getaway",
       overprepared: "Overprepared",
+      cheater: "Cheater",
       bad_idea_connoisseur: "Bad Idea Connoisseur",
       union_violation: "Union Violation",
       aggressively_educational: "Aggressively Educational",
@@ -664,6 +672,7 @@
       ale_chemistry: "Química de cerveza",
       clean_getaway: "Escape limpio",
       overprepared: "Sobrepreparado",
+      cheater: "Tramposo",
       bad_idea_connoisseur: "Conocedor de malas ideas",
       union_violation: "Violación sindical",
       aggressively_educational: "Agresivamente educativo",
@@ -807,6 +816,7 @@
               <button id="menu-leaderboard" type="button">${ui.leaderboard}</button>
               <button id="menu-faq" type="button">${ui.faq}</button>
               <button id="menu-credits" type="button">${ui.credits}</button>
+              <button id="menu-cheats" type="button">${ui.cheatCodes}</button>
               <button id="menu-discord" type="button">${ui.discord}</button>
               <button id="menu-suggest" type="button">${ui.suggest}</button>
               <button id="menu-issue" type="button">${ui.reportIssue}</button>
@@ -957,6 +967,7 @@
   function render() {
     if (state.player) {
       ensurePlayerState();
+      applyCheatSustain();
     }
     document.getElementById("story").innerHTML = state.storyParts.join("");
     if (state.showGameOverImage) {
@@ -1344,23 +1355,26 @@
     const leaderboardButton = document.getElementById("menu-leaderboard");
     const faqButton = document.getElementById("menu-faq");
     const creditsButton = document.getElementById("menu-credits");
+    const cheatsButton = document.getElementById("menu-cheats");
     const discordButton = document.getElementById("menu-discord");
     const suggestButton = document.getElementById("menu-suggest");
     const issueButton = document.getElementById("menu-issue");
     const logoutButton = document.getElementById("menu-logout");
-    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !creditsButton || !discordButton || !suggestButton || !issueButton || !logoutButton) {
+    if (!saveButton || !loadButton || !leaderboardButton || !faqButton || !creditsButton || !cheatsButton || !discordButton || !suggestButton || !issueButton || !logoutButton) {
       return;
     }
     if (menu) {
       menu.hidden = false;
     }
     saveButton.disabled = !state.player;
+    cheatsButton.disabled = !state.player;
     logoutButton.disabled = !state.account;
     saveButton.onclick = () => runAccountMenuAction(saveGame);
     loadButton.onclick = () => runAccountMenuAction(loadGame);
     leaderboardButton.onclick = () => runAccountMenuAction(showLeaderboard);
     faqButton.onclick = () => runAccountMenuAction(showFaq);
     creditsButton.onclick = () => runAccountMenuAction(showCredits);
+    cheatsButton.onclick = () => runAccountMenuAction(showCheatCodePrompt);
     discordButton.onclick = () => runAccountMenuAction(openDiscord);
     suggestButton.onclick = () => runAccountMenuAction(openSuggestionForm);
     issueButton.onclick = () => runAccountMenuAction(openIssueForm);
@@ -1385,6 +1399,67 @@
 
   function openIssueForm() {
     openExternal(ISSUE_URL);
+  }
+
+  async function showCheatCodePrompt() {
+    if (!state.player) {
+      writeKey("story.cheat_unknown");
+      return;
+    }
+    const code = await promptText(t("story.cheat_prompt"), "", {
+      title: ui.cheatCodes,
+      placeholder: "infinite health"
+    });
+    if (!code) {
+      return;
+    }
+    applyCheatCode(code);
+  }
+
+  function normalizeCheatCode(code) {
+    return String(code || "").toLowerCase().replace(/[^a-z]/g, "");
+  }
+
+  function applyCheatCode(code) {
+    ensurePlayerState();
+    const normalized = normalizeCheatCode(code);
+    const cheatMap = {
+      infinitehealth: { key: "health", label: "Infinite Health" },
+      infinitemana: { key: "mana", label: "Infinite Mana" },
+      infiniteac: { key: "ac", label: "Infinite AC" },
+      infinitedamage: { key: "damage", label: "Infinite Damage" },
+      infinitedamge: { key: "damage", label: "Infinite Damage" },
+      infiniteattackchance: { key: "attack", label: "Infinite Attack Chance" }
+    };
+    const cheat = cheatMap[normalized];
+    if (!cheat) {
+      writeKey("story.cheat_unknown");
+      return false;
+    }
+    state.player.cheats[cheat.key] = true;
+    unlock("cheater");
+    applyCheatSustain();
+    writeKey("story.cheat_enabled", { cheat: cheat.label });
+    saveGame();
+    return true;
+  }
+
+  function isCheatActive(key) {
+    return Boolean(state.player && state.player.cheats && state.player.cheats[key]);
+  }
+
+  function applyCheatSustain() {
+    if (!state.player || !state.player.cheats) {
+      return;
+    }
+    if (state.player.cheats.health) {
+      state.player.maxHealth = Math.max(state.player.maxHealth || 0, CHEAT_STAT_VALUE);
+      state.player.health = state.player.maxHealth;
+    }
+    if (state.player.cheats.mana) {
+      state.player.maxMana = Math.max(state.player.maxMana || 0, CHEAT_STAT_VALUE);
+      state.player.mana = state.player.maxMana;
+    }
   }
 
   function openExternal(url) {
@@ -4507,11 +4582,11 @@
   function obliviarchPhaseOne() {
     startCombat(["obliviarchPhaseOne"], "story.obliviarch_phase_one_win", {
       attackersPerRound: 1,
-      deathReason: "false_hydra",
+      deathReason: "obliviarch",
       magistoneRescue: true,
       onWin: obliviarchPhaseTwoIntro,
       onRun: () => {
-        state.player.gameOverReason = "false_hydra";
+        state.player.gameOverReason = "obliviarch";
         state.player.health = 0;
         gameOver();
       }
@@ -4529,10 +4604,10 @@
   function obliviarchPhaseTwo() {
     startCombat(["obliviarchPhaseTwo"], "story.obliviarch_phase_two_win", {
       attackersPerRound: 1,
-      deathReason: "false_hydra",
+      deathReason: "obliviarch",
       onWin: finalStrikePrompt,
       onRun: () => {
-        state.player.gameOverReason = "false_hydra";
+        state.player.gameOverReason = "obliviarch";
         state.player.health = 0;
         gameOver();
       }
@@ -4703,9 +4778,9 @@
         enemy: currentTarget.name,
         ac: currentTarget.ac
       });
-      if (natural === 1) {
+      if (natural === 1 && !isCheatActive("attack")) {
         writeKey("story.combat_miss");
-      } else if (natural === 20 || total >= currentTarget.ac) {
+      } else if (isCheatActive("attack") || natural === 20 || total >= currentTarget.ac) {
         const damageRoll = rollDie(damageDie);
         const critDamageRoll = natural === 20 ? rollDie(damageDie) : 0;
         let damage = damageRoll + stats.damageBonus + betaRageDamageBonus();
@@ -4749,12 +4824,14 @@
       showCombatChoices();
       return;
     }
-    if ((state.player.mana || 0) < power.cost) {
+    if (!isCheatActive("mana") && (state.player.mana || 0) < power.cost) {
       write(`Not enough mana for ${power.name}.`);
       showCombatChoices();
       return;
     }
-    state.player.mana -= power.cost;
+    if (!isCheatActive("mana")) {
+      state.player.mana -= power.cost;
+    }
     write(power.text);
     if (power.type === "buff") {
       state.combat.playerEffects.rageTurns = power.turns || 3;
@@ -4802,7 +4879,7 @@
       enemy: target.name,
       ac: target.ac
     });
-    if (natural === 1 || (natural !== 20 && total < target.ac)) {
+    if (!isCheatActive("attack") && (natural === 1 || (natural !== 20 && total < target.ac))) {
       writeKey("story.combat_miss");
       return;
     }
@@ -4915,6 +4992,11 @@
   }
 
   function enemyTurn() {
+    if (isCheatActive("health")) {
+      write("Infinite Health absorbs the enemy turn.");
+      state.combat.guarding = false;
+      return;
+    }
     const guardBonus = state.combat.playerEffects ? state.combat.playerEffects.guardBonus || 0 : 0;
     const playerAc = combatStats().ac + (state.combat.guarding ? 5 : 0) + guardBonus;
     const attackers = state.combat.enemies.filter((enemy) => enemy.hp > 0).slice(0, state.combat.attackersPerRound);
@@ -4924,7 +5006,7 @@
       const total = natural + enemy.attackBonus;
       if (natural === 1) {
         writeKey("story.enemy_miss", { enemy: enemy.name, natural, total, ac: playerAc });
-      } else if (natural === 20 || total >= playerAc) {
+      } else if (!isCheatActive("ac") && (natural === 20 || total >= playerAc)) {
         const damageRoll = rollDie(enemy.damageDie);
         const critDamageRoll = natural === 20 ? rollDie(enemy.damageDie) : 0;
         let damage = damageRoll + enemy.damageBonus;
@@ -5035,17 +5117,23 @@
   }
 
   function combatStats() {
+    const applyCheatStats = (stats) => ({
+      ...stats,
+      ac: isCheatActive("ac") ? CHEAT_STAT_VALUE : stats.ac,
+      attackBonus: isCheatActive("attack") ? CHEAT_STAT_VALUE : stats.attackBonus,
+      damageBonus: isCheatActive("damage") ? CHEAT_STAT_VALUE : stats.damageBonus
+    });
     if (state.player.betaCustom) {
-      return betaCombatStats();
+      return applyCheatStats(betaCombatStats());
     }
     const base = classes[state.player.class];
-    return {
+    return applyCheatStats({
       ac: base.ac + state.player.upgrades.ac,
       attackBonus: base.attackBonus,
       damageDie: base.damageDie,
       damageBonus: base.damageBonus + state.player.upgrades.damage,
       attacks: state.player.class === "scholar" ? eldritchBlastBeamCount() : base.attacks
-    };
+    });
   }
 
   function eldritchBlastBeamCount() {
@@ -5891,6 +5979,7 @@
 
   function ensurePlayerState() {
     ensureScoreState();
+    state.player.cheats = state.player.cheats || {};
     if (state.player && state.player.class !== "dm" && betaClassBuilds[state.player.class]) {
       const classKey = state.player.class;
       const raceKey = state.player.raceKey || defaultRaceKeyByClass[classKey];

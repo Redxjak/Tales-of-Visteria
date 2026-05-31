@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.11**
+Current version: **0.9.12**
 
 ## Community
 
@@ -36,7 +36,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.9.11 removes the private beta build and keeps story-character mana/ability rewards in the live game. Version 0.9.10 restores mana, power choices, and Gain Mana level-up rewards for story characters after the 5e ability pass.
+Version 0.9.12 adds cheat codes for infinite health, mana, AC, damage, and attack chance, plus the Cheater achievement. Version 0.9.11 removes the private beta build and keeps story-character mana/ability rewards in the live game.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
