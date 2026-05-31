@@ -748,6 +748,7 @@
     pendingChoices: null,
     pendingLevelContinuation: null,
     promptDialog: null,
+    currentStatusReturn: null,
     activeMobilePanel: null,
     oauthLoginFailed: false,
     account: loadAccount(),
@@ -2522,7 +2523,7 @@
     }
     choices.push(
       choice(t("choice.dm_move_orc_camps"), dmOrcCampsPreview),
-      choice(t("choice.current_status"), currentGameStatus)
+      currentStatusChoice()
     );
     setChoices(choices);
   }
@@ -2921,7 +2922,7 @@
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.main_menu"), showStart),
-      choice(t("choice.current_status"), currentGameStatus)
+      currentStatusChoice()
     ]);
   }
 
@@ -2931,10 +2932,33 @@
     gameOver();
   }
 
+  function currentStatusChoice() {
+    return choice(t("choice.current_status"), currentGameStatus, { preserveScene: true });
+  }
+
   function currentGameStatus() {
     restoreChapterMusic(MUSIC_VOLUMES.low);
+    state.currentStatusReturn = {
+      storyParts: [...state.storyParts],
+      choices: [...state.choices],
+      showGameOverImage: state.showGameOverImage,
+      gameOverImage: state.gameOverImage
+    };
     writeKey("story.current_status", { version: VERSION }, true);
-    setChoices([choice(t("choice.back_start"), showStart)]);
+    setChoices([choice(t("choice.back"), restoreCurrentStatusReturn)]);
+  }
+
+  function restoreCurrentStatusReturn() {
+    const previous = state.currentStatusReturn;
+    if (!previous) {
+      showStart();
+      return;
+    }
+    state.currentStatusReturn = null;
+    state.storyParts = previous.storyParts;
+    state.showGameOverImage = previous.showGameOverImage;
+    state.gameOverImage = previous.gameOverImage;
+    setChoices(previous.choices, true);
   }
 
   function caravan(clear = false) {
@@ -4039,7 +4063,7 @@
     }
     choices.push(
       choice(t("choice.move_orc_camps"), moveToOrcCamps),
-      choice(t("choice.current_status"), currentGameStatus),
+      currentStatusChoice(),
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
       choice(t("choice.main_menu"), showStart),
@@ -4319,7 +4343,7 @@
     setChoices([
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
-      choice(t("choice.current_status"), currentGameStatus),
+      currentStatusChoice(),
       choice(t("choice.main_menu"), showStart),
       choice(t("choice.save"), saveGame)
     ]);
@@ -4662,7 +4686,7 @@
     setChoices([
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
-      choice(t("choice.current_status"), currentGameStatus),
+      currentStatusChoice(),
       choice(t("choice.main_menu"), showStart)
     ]);
   }
@@ -4675,7 +4699,7 @@
     setChoices([
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
-      choice(t("choice.current_status"), currentGameStatus),
+      currentStatusChoice(),
       choice(t("choice.main_menu"), showStart)
     ]);
   }
