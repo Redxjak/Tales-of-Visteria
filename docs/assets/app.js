@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.12";
+  const VERSION = "0.9.15";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
@@ -138,8 +138,10 @@
       leaderboardEmpty: "No scores yet.",
       leaderboardFailed: "Could not load leaderboard.",
       leaderboardHeader: "Leaderboard",
+      leaderboardNormalHeader: "Normal",
+      leaderboardCheaterHeader: "Cheaters",
       leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 6,600.",
-      leaderboardLine: "{rank}. {name} - {score} ({character})",
+      leaderboardLine: "{rank}. {cheat_marker}{name} - {score} ({character})",
       promptCancel: "Cancel",
       promptContinue: "Continue",
       promptConfirm: "Confirm",
@@ -215,8 +217,10 @@
       leaderboardEmpty: "Todavía no hay puntajes.",
       leaderboardFailed: "No se pudo cargar la clasificación.",
       leaderboardHeader: "Clasificación",
+      leaderboardNormalHeader: "Normal",
+      leaderboardCheaterHeader: "Tramposos",
       leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 6,600.",
-      leaderboardLine: "{rank}. {name} - {score} ({character})",
+      leaderboardLine: "{rank}. {cheat_marker}{name} - {score} ({character})",
       promptCancel: "Cancelar",
       promptContinue: "Continuar",
       promptConfirm: "Confirmar",
@@ -1429,8 +1433,9 @@
       infinitemana: { key: "mana", label: "Infinite Mana" },
       infiniteac: { key: "ac", label: "Infinite AC" },
       infinitedamage: { key: "damage", label: "Infinite Damage" },
-      infinitedamge: { key: "damage", label: "Infinite Damage" },
-      infiniteattackchance: { key: "attack", label: "Infinite Attack Chance" }
+      infiniteattackchance: { key: "attack", label: "Infinite Attack Chance" },
+      infiniteexp: { key: "exp", label: "Infinite EXP" },
+      infiniteexperience: { key: "exp", label: "Infinite EXP" }
     };
     const cheat = cheatMap[normalized];
     if (!cheat) {
@@ -1460,6 +1465,11 @@
     if (state.player.cheats.mana) {
       state.player.maxMana = Math.max(state.player.maxMana || 0, CHEAT_STAT_VALUE);
       state.player.mana = state.player.maxMana;
+    }
+    if (state.player.cheats.exp && state.player.class !== "dm") {
+      state.player.level = Math.max(state.player.level || BASE_LEVEL, 20);
+      state.player.experience = Math.max(state.player.experience || 0, state.player.xpToNext || BASE_XP_TO_NEXT);
+      unlock("maxed_out");
     }
   }
 
@@ -5592,35 +5602,43 @@
     setChoices([choice(t("choice.main_menu"), showStart)]);
     try {
       await refreshAccountSession();
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}?select=player_name,character_name,score,ending_reached,fights_won,achievements_unlocked,created_at&order=score.desc&limit=25`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}?select=player_name,character_name,score,ending_reached,fights_won,achievements_unlocked,cheated,created_at&order=score.desc&limit=25`, {
         headers: supabaseHeaders(true)
       });
       if (!response.ok) {
         throw new Error(`Leaderboard request failed: ${response.status}`);
       }
       const scores = await response.json();
-      if (!scores.length) {
-        writeLeaderboard([ui.leaderboardEmpty]);
+      const normalScores = scores.filter((score) => !score.cheated);
+      const cheatedScores = scores.filter((score) => score.cheated);
+      if (!normalScores.length && !cheatedScores.length) {
+        writeLeaderboard([ui.leaderboardEmpty], [ui.leaderboardEmpty]);
         return;
       }
-      const lines = [];
-      scores.forEach((score, index) => {
-        lines.push(format(ui.leaderboardLine, {
-          rank: index + 1,
-          name: score.player_name,
-          score: score.score,
-          character: score.character_name
-        }));
-      });
-      writeLeaderboard(lines);
+      writeLeaderboard(scoreLines(normalScores), scoreLines(cheatedScores, true));
     } catch {
-      writeLeaderboard([ui.leaderboardFailed]);
+      writeLeaderboard([ui.leaderboardFailed], [ui.leaderboardFailed]);
     }
   }
 
-  function writeLeaderboard(lines) {
+  function scoreLines(scores, cheated = false) {
+    if (!scores.length) {
+      return [ui.leaderboardEmpty];
+    }
+    return scores.map((score, index) => (
+      format(ui.leaderboardLine, {
+          rank: index + 1,
+          cheat_marker: cheated ? "*CH " : "",
+          name: score.player_name,
+          score: score.score,
+          character: score.character_name
+        })
+    ));
+  }
+
+  function writeLeaderboard(normalLines, cheaterLines = []) {
     state.storyParts = [
-      `<div class="leaderboard-view"><h2>${escapeHtml(ui.leaderboardHeader)}</h2><p class="leaderboard-warning">${escapeHtml(ui.leaderboardWarning)}</p><pre>${escapeHtml(lines.join("\n"))}</pre></div>`
+      `<div class="leaderboard-view"><h2>${escapeHtml(ui.leaderboardHeader)}</h2><p class="leaderboard-warning">${escapeHtml(ui.leaderboardWarning)}</p><div class="leaderboard-columns"><section><h3>${escapeHtml(ui.leaderboardNormalHeader)}</h3><pre>${escapeHtml(normalLines.join("\n"))}</pre></section><section><h3>${escapeHtml(ui.leaderboardCheaterHeader)}</h3><pre>${escapeHtml(cheaterLines.join("\n"))}</pre></section></div></div>`
     ];
     state.showGameOverImage = false;
     render();
@@ -5705,6 +5723,7 @@
       deaths: state.player.flags.deathRecorded ? 1 : 0,
       achievements_unlocked: achievementsUnlocked,
       forest_attempts: state.player.flags.forestAttempts || 0,
+      cheated: hasUsedCheats(),
       route: scoreRoute(),
       language: lang
     };
@@ -5712,6 +5731,10 @@
       payload.user_id = state.account.id;
     }
     return payload;
+  }
+
+  function hasUsedCheats() {
+    return Boolean(state.player && state.player.cheats && Object.values(state.player.cheats).some(Boolean));
   }
 
   function calculateScore(achievementsUnlocked) {

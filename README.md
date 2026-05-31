@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.12**
+Current version: **0.9.15**
 
 ## Community
 
@@ -36,9 +36,9 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.9.12 adds cheat codes for infinite health, mana, AC, damage, and attack chance, plus the Cheater achievement. Version 0.9.11 removes the private beta build and keeps story-character mana/ability rewards in the live game.
+Version 0.9.15 separates normal and cheater leaderboard rows into side-by-side lists. Version 0.9.14 adds the infinite EXP cheat code.
 
-Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
+Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled. Version 0.9.13 adds the `cheated` leaderboard column used for the `*CH` display marker.
 
 Public usernames are stored in `user_profiles`, and cloud stats/save data are stored in `user_game_data`. Guest play still uses local browser storage only.
 

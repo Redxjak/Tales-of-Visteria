@@ -10,6 +10,7 @@ create table if not exists public.leaderboard_scores (
   deaths integer not null default 0 check (deaths >= 0),
   achievements_unlocked integer not null default 0 check (achievements_unlocked >= 0),
   forest_attempts integer not null default 0 check (forest_attempts >= 0),
+  cheated boolean not null default false,
   route text,
   language text not null default 'en',
   created_at timestamptz not null default now()
@@ -17,6 +18,9 @@ create table if not exists public.leaderboard_scores (
 
 alter table public.leaderboard_scores
 add column if not exists user_id uuid references auth.users(id) on delete set null;
+
+alter table public.leaderboard_scores
+add column if not exists cheated boolean not null default false;
 
 alter table public.leaderboard_scores enable row level security;
 
