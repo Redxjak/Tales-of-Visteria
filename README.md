@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.9**
+Current version: **0.9.10**
 
 ## Community
 
@@ -36,7 +36,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.9.9 aligns combat labels and custom abilities with DnD 5e-style names, adds Eldritch Blast beam scaling, and lets players return to the residential street after Large Manor or Large House while keeping special rewards one-time. Version 0.9.8 adds Wazetax feedback updates: music volume control and normalization, character-specific mimic-house fire outcomes, non-destructive save notices, slightly harder warehouse leader combat, and visible public-name limits/validation.
+Version 0.9.10 restores mana, power choices, and Gain Mana level-up rewards for story characters after the 5e ability pass. Version 0.9.9 aligns combat labels and custom abilities with DnD 5e-style names, adds Eldritch Blast beam scaling, and lets players return to the residential street after Large Manor or Large House while keeping special rewards one-time.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 

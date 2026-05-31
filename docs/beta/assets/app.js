@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.9";
+  const VERSION = "0.9.10";
   const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
   const IS_BETA = APP_CHANNEL === "beta";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
@@ -553,6 +553,20 @@
     }
   };
 
+  const defaultRaceKeyByClass = {
+    warrior: "goliath",
+    ranger: "elf",
+    scholar: "human",
+    dwarf: "dwarf"
+  };
+
+  const defaultWeaponKeyByClass = {
+    warrior: "greataxe",
+    ranger: "longbow",
+    scholar: "eldritch_focus",
+    dwarf: "battleaxe"
+  };
+
   const betaPowers = {
     rage: { name: "Rage", cost: 3, type: "buff", turns: 3, text: "You enter a barbarian rage. For three turns, your attacks deal +2 damage." },
     hunters_mark: { name: "Hunter's Mark", cost: 4, type: "attack", attackBonus: 2, damageBonus: 3, text: "You mark your prey and strike the weakest opening." },
@@ -974,6 +988,9 @@
   }
 
   function render() {
+    if (state.player) {
+      ensurePlayerState();
+    }
     document.getElementById("story").innerHTML = state.storyParts.join("");
     if (state.showGameOverImage) {
       const gameOverImage = state.gameOverImage || { file: "game_over_party.png", alt: "Tales of Visteria party" };
@@ -1042,7 +1059,7 @@
       return;
     }
     document.getElementById("level-modal-title").textContent = t("story.level_up_title", { level: state.player.level });
-    document.getElementById("level-modal-body").textContent = t(state.player && state.player.betaCustom ? "story.level_up_body_beta" : "story.level_up_body");
+    document.getElementById("level-modal-body").textContent = t(hasManaAbilities() ? "story.level_up_body_beta" : "story.level_up_body");
     const choiceArea = document.getElementById("level-modal-choices");
     choiceArea.innerHTML = "";
     state.levelRewardChoices.forEach((levelChoice) => {
@@ -4710,7 +4727,7 @@
       choice(t("choice.dodge"), dodge, { detail: "Guard for the enemy turn, raising your AC before enemies attack." }),
       choice(t("choice.run"), runCombat, { detail: "Try to escape combat with a sneak roll." })
     ];
-    if (state.player.betaCustom) {
+    if (hasManaAbilities()) {
       betaCombatChoices().forEach((betaChoice) => labels.splice(labels.length - 2, 0, betaChoice));
     }
     if (state.player.gear.includes("health potion")) {
@@ -5179,7 +5196,7 @@
       state.player.xpToNext = BASE_XP_TO_NEXT + Math.max(0, state.player.level - BASE_LEVEL) * XP_PER_LEVEL;
       state.player.maxHealth += 4;
       state.player.health += 4;
-      if (state.player.betaCustom) {
+      if (hasManaAbilities()) {
         state.player.maxMana = (state.player.maxMana || 0) + 4;
         state.player.mana = Math.min(state.player.maxMana, (state.player.mana || 0) + 4);
       }
@@ -5209,7 +5226,7 @@
         continueAfterLevel();
       })
     ];
-    if (state.player.betaCustom) {
+    if (hasManaAbilities()) {
       levelChoices.push(choice(t("choice.level_mana"), () => {
         if (cancelLevelRewardIfDead()) {
           return;
@@ -5219,6 +5236,8 @@
         writeKey("story.level_mana");
         continueAfterLevel();
       }));
+    }
+    if (state.player.betaCustom) {
       levelChoices.push(choice(t("choice.level_attribute"), () => {
         if (cancelLevelRewardIfDead()) {
           return;
@@ -5339,7 +5358,7 @@
   }
 
   function restoreBetaMana() {
-    if (state.player && state.player.betaCustom) {
+    if (hasManaAbilities()) {
       state.player.mana = state.player.maxMana;
     }
   }
@@ -6027,6 +6046,25 @@
 
   function ensurePlayerState() {
     ensureScoreState();
+    if (state.player && state.player.class !== "dm" && betaClassBuilds[state.player.class]) {
+      const classKey = state.player.class;
+      const raceKey = state.player.raceKey || defaultRaceKeyByClass[classKey];
+      const weaponKey = state.player.weaponKey || defaultWeaponKeyByClass[classKey];
+      const build = betaClassBuilds[classKey];
+      const race = betaRaces[raceKey] || {};
+      const weapon = betaWeapons[weaponKey] || {};
+      state.player.raceKey = raceKey;
+      state.player.weaponKey = weaponKey;
+      state.player.weaponName = state.player.weaponName || weapon.name;
+      state.player.knownAbilities = state.player.knownAbilities || [...new Set([...build.abilities, race.ability, weapon.skill].filter(Boolean))];
+      if (state.player.maxMana === undefined) {
+        const levelMana = Math.max(0, (state.player.level || BASE_LEVEL) - BASE_LEVEL) * 4;
+        state.player.maxMana = Math.max(0, build.manaBase + (race.mana || 0) + levelMana);
+      }
+      if (state.player.mana === undefined) {
+        state.player.mana = state.player.maxMana;
+      }
+    }
     if (state.player.betaCustom) {
       const build = betaClassBuilds[state.player.class];
       const race = betaRaces[state.player.raceKey];
@@ -6173,6 +6211,10 @@
     if (state.player.upgrades.damage === undefined) {
       state.player.upgrades.damage = 0;
     }
+  }
+
+  function hasManaAbilities(player = state.player) {
+    return Boolean(player && player.class !== "dm" && betaClassBuilds[player.class] && player.maxMana !== undefined);
   }
 
   function saveGame() {
@@ -6337,7 +6379,7 @@
     if (!state.player) {
       return "";
     }
-    if (state.player.betaCustom) {
+    if (hasManaAbilities()) {
       return `${state.player.name} the ${state.player.race} ${state.player.title}   HP: ${state.player.health}/${state.player.maxHealth}   Mana: ${state.player.mana}/${state.player.maxMana}   Weapon: ${state.player.weaponName}`;
     }
     return `${state.player.name} the ${state.player.title}   Health: ${state.player.health}/${state.player.maxHealth}   Gold: ${state.player.gold}   Supplies: ${state.player.supplies}   Gear: ${state.player.gear.join(", ") || t("ui.none")}`;
@@ -6361,14 +6403,20 @@
       `${ui.attackBonus.padEnd(18)}+${stats.attackBonus}`,
       `${ui.damage.padEnd(18)}d${stats.damageDie} + ${stats.damageBonus}`,
     ];
-    if (state.player.betaCustom) {
+    if (hasManaAbilities()) {
       lines.push(
         `${"Mana".padEnd(18)}${state.player.mana}/${state.player.maxMana}`,
         `${"Weapon".padEnd(18)}${state.player.weaponName}`,
-        "",
-        "Attributes",
-        "------------------------------",
-        betaAttributeLine(state.player.attributes),
+      );
+      if (state.player.betaCustom) {
+        lines.push(
+          "",
+          "Attributes",
+          "------------------------------",
+          betaAttributeLine(state.player.attributes),
+        );
+      }
+      lines.push(
         "",
         "Powers",
         "------------------------------",
