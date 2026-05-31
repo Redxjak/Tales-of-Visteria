@@ -385,7 +385,7 @@
   "story.level_up": "Level up!\n+4 Health\nChoose your level up reward.",
   "story.level_up_title": "Level up!",
   "story.level_up_body": "+4 Health\nChoose your level up reward.",
-  "story.level_up_body_beta": "+4 Health, +4 Mana\nChoose your level up reward.",
+  "story.level_up_body_mana": "+4 Health, +4 Mana\nChoose your level up reward.",
   "story.level_hp": "Your maximum health increases by another 4, and you feel tougher.",
   "story.level_mana": "Your maximum mana increases by another 4, and power returns to you.",
   "story.level_attribute": "{attribute} increases to {value}.",

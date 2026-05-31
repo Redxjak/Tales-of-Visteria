@@ -1,17 +1,15 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.10";
-  const APP_CHANNEL = document.body.dataset.channel === "beta" ? "beta" : "live";
-  const IS_BETA = APP_CHANNEL === "beta";
+  const VERSION = "0.9.11";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
   const XP_PER_LEVEL = 50;
-  const BETA_CHARACTER_SCHEMA_VERSION = "beta-character-v1";
-  const BETA_ATTRIBUTES = ["str", "dex", "con", "int", "wis", "cha"];
+  const CUSTOM_CHARACTER_SCHEMA_VERSION = "custom-character-v1";
+  const CUSTOM_ATTRIBUTES = ["str", "dex", "con", "int", "wis", "cha"];
   const SUPABASE_URL = "https://fojkijwketpzxsbikmsl.supabase.co";
   const SUPABASE_KEY = "sb_publishable_pxMr-7kXAoQ9gz0mTTWLew_FAIRtAio";
   const CHANNEL_CONFIG = {
@@ -23,26 +21,15 @@
       allowGuests: true,
       allowlistTable: "",
       reportLabel: "issue"
-    },
-    beta: {
-      storagePrefix: "tov.beta.",
-      leaderboardTable: "beta_leaderboard_scores",
-      profileTable: "beta_user_profiles",
-      gameDataTable: "beta_user_game_data",
-      allowGuests: false,
-      allowlistTable: "beta_tester_allowlist",
-      reportLabel: "beta"
     }
   };
-  const appConfig = CHANNEL_CONFIG[APP_CHANNEL];
+  const appConfig = CHANNEL_CONFIG.live;
   const LEADERBOARD_TABLE = appConfig.leaderboardTable;
   const PROFILE_TABLE = appConfig.profileTable;
   const GAME_DATA_TABLE = appConfig.gameDataTable;
-  const BETA_ALLOWLIST_TABLE = appConfig.allowlistTable;
   const DISCORD_URL = "https://discord.gg/9C4npSfNQd";
   const SUGGESTION_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new?template=suggestion.yml";
   const ISSUE_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new?template=issue.yml";
-  const BETA_REPORT_URL = "https://github.com/Redxjak/Tales-of-Visteria/issues/new";
   const MUSIC_TRACKS = {
     epic: `${ASSET_BASE}/audio/fantasy_medieval_epic_music.mp3`,
     ambient: `${ASSET_BASE}/audio/fantasy_medieval_ambient.mp3`,
@@ -183,14 +170,6 @@
       discord: "Discord",
       suggest: "Suggest",
       reportIssue: "Report Issue",
-      betaReportIssue: "Report Beta Issue",
-      betaBadge: "BETA",
-      betaLoginScreen: "Private beta access requires an approved tester account. Sign in with an allowlisted email to continue.",
-      betaAccessChecking: "Checking beta tester access...",
-      betaAccessDenied: "This account is not on the beta tester list yet. Ask the developer to add your tester email, then sign in again.",
-      betaAccessGranted: "Beta access confirmed.",
-      betaGuestBlocked: "Guest play is disabled in the private beta. Please sign in with an approved tester account.",
-      betaWarning: "Private beta build. Saves, stats, and leaderboard entries are separate from the live game.",
       log: "Log",
       closeLog: "Close",
       emptyLog: "No story log yet.",
@@ -267,14 +246,6 @@
       discord: "Discord",
       suggest: "Sugerir",
       reportIssue: "Reportar problema",
-      betaReportIssue: "Reportar error beta",
-      betaBadge: "BETA",
-      betaLoginScreen: "El acceso a la beta privada requiere una cuenta de tester aprobada. Inicia sesion con un correo permitido para continuar.",
-      betaAccessChecking: "Comprobando acceso de tester beta...",
-      betaAccessDenied: "Esta cuenta todavia no esta en la lista de testers beta. Pide al desarrollador que agregue tu correo y vuelve a iniciar sesion.",
-      betaAccessGranted: "Acceso beta confirmado.",
-      betaGuestBlocked: "El juego como invitado esta desactivado en la beta privada. Inicia sesion con una cuenta de tester aprobada.",
-      betaWarning: "Version beta privada. Los guardados, estadisticas y puntajes estan separados del juego en vivo.",
       log: "Registro",
       closeLog: "Cerrar",
       emptyLog: "Todavia no hay registro.",
@@ -295,7 +266,7 @@
     "choice3.sneak_bridge": "Sneak Across the Bridge",
     "story.level_up_title": "Level up!",
     "story.level_up_body": "+4 Health\nChoose your level up reward.",
-    "story.level_up_body_beta": "+4 Health, +4 Mana\nChoose your level up reward.",
+    "story.level_up_body_mana": "+4 Health, +4 Mana\nChoose your level up reward.",
     "choice.level_mana": "Gain Mana",
     "choice.level_attribute": "Gain Attribute",
     "story.level_mana": "Your maximum mana increases by another 4, and power returns to you.",
@@ -770,8 +741,6 @@
     promptDialog: null,
     activeMobilePanel: null,
     oauthLoginFailed: false,
-    betaAccessChecked: false,
-    betaAccessAllowed: false,
     account: loadAccount(),
     leaderboard: [],
     music: {
@@ -801,9 +770,7 @@
     await handleOAuthRedirect();
     if (state.account && !state.account.guest) {
       await refreshAccountSession();
-      if (await ensureBetaAccess({ silent: true })) {
-        await loadCloudData();
-      }
+      await loadCloudData();
     }
     drawShell();
     bindFirstGestureAudio();
@@ -822,7 +789,7 @@
       <header class="topbar">
         <div class="title-row">
           <img class="game-logo" src="${ASSET_BASE}/tales-of-visteria-logo.png" alt="Tales of Visteria">
-          <span class="version">v${VERSION}${IS_BETA ? ` ${ui.betaBadge}` : ""}</span>
+          <span class="version">v${VERSION}</span>
         </div>
         <div class="meta-row">
           <details id="account-menu" class="account-menu">
@@ -1059,7 +1026,7 @@
       return;
     }
     document.getElementById("level-modal-title").textContent = t("story.level_up_title", { level: state.player.level });
-    document.getElementById("level-modal-body").textContent = t(hasManaAbilities() ? "story.level_up_body_beta" : "story.level_up_body");
+    document.getElementById("level-modal-body").textContent = t(hasManaAbilities() ? "story.level_up_body_mana" : "story.level_up_body");
     const choiceArea = document.getElementById("level-modal-choices");
     choiceArea.innerHTML = "";
     state.levelRewardChoices.forEach((levelChoice) => {
@@ -1417,47 +1384,7 @@
   }
 
   function openIssueForm() {
-    if (IS_BETA) {
-      openExternal(betaReportUrl());
-      return;
-    }
     openExternal(ISSUE_URL);
-  }
-
-  function betaReportUrl() {
-    const params = new URLSearchParams({
-      title: `[Beta ${VERSION}] `,
-      labels: appConfig.reportLabel,
-      body: betaReportBody()
-    });
-    return `${BETA_REPORT_URL}?${params.toString()}`;
-  }
-
-  function betaReportBody() {
-    const account = state.account || {};
-    const player = state.player || {};
-    const lines = [
-      "Please also post this beta report in Discord so the beta channel sees it quickly:",
-      DISCORD_URL,
-      "",
-      "## What happened?",
-      "",
-      "",
-      "## What did you expect?",
-      "",
-      "",
-      "## Beta diagnostics",
-      `Version: ${VERSION}`,
-      `Channel: ${APP_CHANNEL}`,
-      `Language: ${lang}`,
-      `URL: ${window.location.href.split("#")[0]}`,
-      `Tester: ${account.email || account.name || "unknown"}`,
-      `Character: ${player.name ? `${player.name} the ${player.title}` : "none"}`,
-      `Chapter: ${player.chapter || "none"}`,
-      `Route: ${state.player ? scoreRoute() : "none"}`,
-      `Browser: ${navigator.userAgent}`
-    ];
-    return lines.join("\n");
   }
 
   function openExternal(url) {
@@ -1484,7 +1411,7 @@
       },
       {
         question: "Como funcionan las cuentas y guardados?",
-        answer: "Los invitados guardan en este navegador. Si inicias sesion con correo o Google, el juego tambien intenta guardar tus estadisticas, logros y partida en la nube para usarlas despues. La beta privada usa guardados y tablas separadas de la version live."
+        answer: "Los invitados guardan en este navegador. Si inicias sesion con correo o Google, el juego tambien intenta guardar tus estadisticas, logros y partida en la nube para usarlas despues."
       },
       {
         question: "Que hay de nuevo en la creacion de personaje?",
@@ -1496,7 +1423,7 @@
       },
       {
         question: "Como reporto errores o doy ideas?",
-        answer: "Usa Report Issue para abrir un reporte con detalles de version y sesion. En beta, Report Beta Issue incluye diagnosticos adicionales. El boton Discord abre la comunidad para comentarios rapidos."
+        answer: "Usa Report Issue para abrir un reporte con detalles de version y sesion. El boton Discord abre la comunidad para comentarios rapidos."
       }
     ] : [
       {
@@ -1517,7 +1444,7 @@
       },
       {
         question: "How do accounts and saves work?",
-        answer: "Guests save in this browser. Signed-in players using email or Google stay signed in unless they log out, and the game also tries to sync stats, achievements, and saves to the cloud. The private beta uses separate saves and leaderboard data from live."
+        answer: "Guests save in this browser. Signed-in players using email or Google stay signed in unless they log out, and the game also tries to sync stats, achievements, and saves to the cloud."
       },
       {
         question: "What changed with character creation?",
@@ -1529,7 +1456,7 @@
       },
       {
         question: "How do I report bugs or send ideas?",
-        answer: "Use Report Issue to open a report with version and session details. In beta, Report Beta Issue includes extra diagnostics. The Discord button opens the community for quick feedback."
+        answer: "Use Report Issue to open a report with version and session details. The Discord button opens the community for quick feedback."
       }
     ];
     return entries.map((entry) => `
@@ -1578,14 +1505,13 @@
     }
     setMusic("epic");
     const stats = plotText();
-    const intro = IS_BETA ? `${ui.betaWarning}\n\n${t("story.start", { stats })}` : t("story.start", { stats });
-    write(intro, true);
+    write(t("story.start", { stats }), true);
     const choices = [
       choice(t("choice.new_game"), showCharacterSelect),
       choice(t("choice.load_game"), loadGame),
       choice(ui.leaderboard, showLeaderboard),
       choice(ui.suggest, openSuggestionForm),
-      choice(IS_BETA ? ui.betaReportIssue : ui.reportIssue, openIssueForm)
+      choice(ui.reportIssue, openIssueForm)
     ];
     setChoices(choices);
   }
@@ -1593,7 +1519,7 @@
   function showLoginScreen() {
     setMusic("epic", { volume: MUSIC_VOLUMES.low });
     state.player = null;
-    write(IS_BETA ? ui.betaLoginScreen : ui.loginScreen, true);
+    write(ui.loginScreen, true);
     const choices = [
       choice(ui.login, signIn),
       choice(ui.googleLogin, signInWithGoogle),
@@ -1626,10 +1552,8 @@
         password
       });
       setAuthenticatedAccount(session);
-      if (await ensureBetaAccess()) {
-        await loadCloudData();
-        showStart();
-      }
+      await loadCloudData();
+      showStart();
     } catch {
       writeLoginFailed();
     }
@@ -1666,11 +1590,9 @@
       });
       if (session.access_token) {
         setAuthenticatedAccount(session, cleanDisplayName);
-        if (await ensureBetaAccess()) {
-          await saveProfile();
-          await saveCloudData();
-          showStart();
-        }
+        await saveProfile();
+        await saveCloudData();
+        showStart();
       } else {
         state.account = {
           name: cleanDisplayName,
@@ -1702,10 +1624,6 @@
   }
 
   function playAsGuest() {
-    if (!appConfig.allowGuests) {
-      write(ui.betaGuestBlocked);
-      return;
-    }
     state.account = { name: ui.guest, guest: true };
     localStorage.removeItem(`${storagePrefix}account`);
     showStart();
@@ -1932,7 +1850,7 @@
   function newPlayer(characterClass) {
     const template = classes[characterClass];
     state.player = {
-      schemaVersion: IS_BETA ? BETA_CHARACTER_SCHEMA_VERSION : undefined,
+      schemaVersion: undefined,
       class: characterClass,
       name: template.name,
       title: template.title,
@@ -2024,7 +1942,7 @@
     const maxHealth = build.maxHealth + (conMod * 3) + (race.maxHealth || 0);
     const maxMana = Math.max(0, build.manaBase + betaModifier(attributes[build.damageStat]) + (race.mana || 0));
     state.player = {
-      schemaVersion: BETA_CHARACTER_SCHEMA_VERSION,
+      schemaVersion: CUSTOM_CHARACTER_SCHEMA_VERSION,
       betaCustom: true,
       class: creator.characterClass,
       name: creator.name,
@@ -2119,7 +2037,7 @@
   }
 
   function rollBetaStatArray() {
-    return BETA_ATTRIBUTES.map(() => {
+    return CUSTOM_ATTRIBUTES.map(() => {
       const rolls = [rollDie(6), rollDie(6), rollDie(6), rollDie(6)].sort((a, b) => b - a);
       return rolls.slice(0, 3).reduce((total, value) => total + value, 0);
     }).sort((a, b) => b - a);
@@ -2135,7 +2053,7 @@
 
   function betaFinalAttributes(baseAttributes, race) {
     const attributes = {};
-    BETA_ATTRIBUTES.forEach((attribute) => {
+    CUSTOM_ATTRIBUTES.forEach((attribute) => {
       attributes[attribute] = (baseAttributes[attribute] || 10) + (race.bonuses[attribute] || 0);
     });
     return attributes;
@@ -5284,7 +5202,7 @@
       return;
     }
     state.awaitingLevelReward = true;
-    state.levelRewardChoices = BETA_ATTRIBUTES.map((attribute) => {
+    state.levelRewardChoices = CUSTOM_ATTRIBUTES.map((attribute) => {
       const label = t(`choice.level_attribute_${attribute}`);
       const current = (state.player.attributes && state.player.attributes[attribute]) || 10;
       return choice(label, () => increaseLevelAttribute(attribute), {
@@ -5563,7 +5481,7 @@
     try {
       await refreshAccountSession();
       const response = await fetch(`${SUPABASE_URL}/rest/v1/${LEADERBOARD_TABLE}?select=player_name,character_name,score,ending_reached,fights_won,achievements_unlocked,created_at&order=score.desc&limit=25`, {
-        headers: supabaseHeaders(!IS_BETA)
+        headers: supabaseHeaders(true)
       });
       if (!response.ok) {
         throw new Error(`Leaderboard request failed: ${response.status}`);
@@ -5628,7 +5546,7 @@
     try {
       await refreshAccountSession();
       let response = await postLeaderboardScore(payload);
-      if (!IS_BETA && !response.ok && payload.user_id) {
+      if (!response.ok && payload.user_id) {
         delete payload.user_id;
         response = await postLeaderboardScore(payload, true);
       }
@@ -5843,71 +5761,7 @@
   }
 
   function canEnterGame() {
-    return !IS_BETA || (isCloudAccount() && state.betaAccessAllowed);
-  }
-
-  async function ensureBetaAccess(options = {}) {
-    if (!IS_BETA) {
-      state.betaAccessChecked = true;
-      state.betaAccessAllowed = true;
-      return true;
-    }
-    if (!isCloudAccount()) {
-      state.betaAccessChecked = true;
-      state.betaAccessAllowed = false;
-      return false;
-    }
-    if (!options.silent) {
-      write(ui.betaAccessChecking, true);
-    }
-    try {
-      await refreshAccountSession();
-      const filters = [];
-      if (state.account.id) {
-        filters.push(`user_id.eq.${encodeURIComponent(state.account.id)}`);
-      }
-      if (state.account.email) {
-        filters.push(`email.eq.${encodeURIComponent(state.account.email.toLowerCase())}`);
-      }
-      const query = filters.length ? `&or=(${filters.join(",")})` : "";
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/${BETA_ALLOWLIST_TABLE}?select=user_id,email,is_active&is_active=eq.true${query}&limit=1`, {
-        headers: supabaseHeaders()
-      });
-      if (!response.ok) {
-        throw new Error(`Beta allowlist request failed: ${response.status}`);
-      }
-      const rows = await response.json();
-      state.betaAccessChecked = true;
-      state.betaAccessAllowed = rows.length > 0;
-      if (!state.betaAccessAllowed) {
-        state.player = null;
-        if (!options.silent) {
-          write(ui.betaAccessDenied, true);
-          setChoices([
-            choice(ui.login, signIn),
-            choice(ui.googleLogin, signInWithGoogle),
-            choice(ui.betaReportIssue, openIssueForm)
-          ]);
-        }
-        return false;
-      }
-      if (!options.silent) {
-        write(ui.betaAccessGranted, true);
-      }
-      return true;
-    } catch {
-      state.betaAccessChecked = true;
-      state.betaAccessAllowed = false;
-      if (!options.silent) {
-        write(ui.betaAccessDenied, true);
-        setChoices([
-          choice(ui.login, signIn),
-          choice(ui.googleLogin, signInWithGoogle),
-          choice(ui.betaReportIssue, openIssueForm)
-        ]);
-      }
-      return false;
-    }
+    return true;
   }
 
   async function refreshAccountSession(force = false) {
@@ -5933,9 +5787,6 @@
     if (!isCloudAccount()) {
       return;
     }
-    if (IS_BETA && !(await ensureBetaAccess({ silent: true }))) {
-      return;
-    }
     await refreshAccountSession();
     await fetch(`${SUPABASE_URL}/rest/v1/${PROFILE_TABLE}?on_conflict=user_id`, {
       method: "POST",
@@ -5954,9 +5805,6 @@
 
   async function loadCloudData() {
     if (!isCloudAccount()) {
-      return;
-    }
-    if (IS_BETA && !state.betaAccessAllowed) {
       return;
     }
     try {
@@ -5985,9 +5833,6 @@
 
   async function saveCloudData() {
     if (!isCloudAccount()) {
-      return;
-    }
-    if (IS_BETA && !(await ensureBetaAccess({ silent: true }))) {
       return;
     }
     try {
@@ -6070,7 +5915,7 @@
       const race = betaRaces[state.player.raceKey];
       const weapon = betaWeapons[state.player.weaponKey];
       if (build && race && weapon) {
-        state.player.schemaVersion = state.player.schemaVersion || BETA_CHARACTER_SCHEMA_VERSION;
+        state.player.schemaVersion = state.player.schemaVersion || CUSTOM_CHARACTER_SCHEMA_VERSION;
         state.player.weaponName = state.player.weaponName || weapon.name;
         state.player.knownAbilities = state.player.knownAbilities || [...new Set([...build.abilities, race.ability, weapon.skill].filter(Boolean))];
         state.player.maxMana = state.player.maxMana || Math.max(0, build.manaBase + betaModifier((state.player.attributes || {})[build.damageStat] || 10) + (race.mana || 0));
@@ -6246,12 +6091,6 @@
     }
     try {
       state.player = JSON.parse(saved);
-      if (IS_BETA && state.player.schemaVersion !== BETA_CHARACTER_SCHEMA_VERSION) {
-        state.player = null;
-        write("This beta requires a new custom character. Older saves are not valid here.", true);
-        setChoices([choice(t("choice.new_game"), showCharacterSelect), choice(t("choice.main_menu"), showStart)]);
-        return;
-      }
       ensurePlayerState();
       checkStatAchievements();
       writeKey("ui.loaded_game", {}, true);

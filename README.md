@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.10**
+Current version: **0.9.11**
 
 ## Community
 
@@ -36,15 +36,11 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.9.10 restores mana, power choices, and Gain Mana level-up rewards for story characters after the 5e ability pass. Version 0.9.9 aligns combat labels and custom abilities with DnD 5e-style names, adds Eldritch Blast beam scaling, and lets players return to the residential street after Large Manor or Large House while keeping special rewards one-time.
+Version 0.9.11 removes the private beta build and keeps story-character mana/ability rewards in the live game. Version 0.9.10 restores mana, power choices, and Gain Mana level-up rewards for story characters after the 5e ability pass.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled.
 
 Public usernames are stored in `user_profiles`, and cloud stats/save data are stored in `user_game_data`. Guest play still uses local browser storage only.
-
-## Private beta
-
-The private beta lives under `/beta/` and is gated inside the app by Supabase login plus a tester allowlist. Beta saves, stats, and leaderboard rows use separate tables and browser storage from the live game. Run `supabase/beta.sql` before inviting testers, then follow `BETA_TESTING.md`.
 
 ## Current chapter
 
