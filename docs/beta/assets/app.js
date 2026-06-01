@@ -2,6 +2,7 @@
   "use strict";
 
   const ASSET_BASE = "../assets";
+  const BETA_VERSION = "0.1.1-pixel-beta";
   const MAPS = [
     `${ASSET_BASE}/maps/veyrindel_pixel_dungeon.tmx`
   ];
@@ -159,6 +160,7 @@
         <div class="title-row">
           <h1>Tales of Visteria</h1>
           <span class="beta-pill">Pixel Dungeon Beta</span>
+          <span class="beta-pill">v${BETA_VERSION}</span>
         </div>
         <div class="status-row">
           <span>Depth ${state.depth + 1}</span>
