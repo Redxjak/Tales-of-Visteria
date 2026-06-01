@@ -3,21 +3,15 @@
 
   const ASSET_BASE = "../assets";
   const MAPS = [
-    `${ASSET_BASE}/maps/visteria_ruins_depth_1.tmx`,
-    `${ASSET_BASE}/maps/visteria_ruins_depth_2.tmx`
+    `${ASSET_BASE}/maps/veyrindel_pixel_dungeon.tmx`
   ];
-  const TILE_INFO = {
-    1: { key: "floor", label: "stone floor", walkable: true },
-    2: { key: "wall", label: "wall", walkable: false },
-    3: { key: "stairs", label: "stairs", walkable: true },
-    4: { key: "chasm", label: "chasm", walkable: false },
-    5: { key: "door", label: "old door", walkable: true },
-    6: { key: "lava", label: "magma", walkable: false },
-    7: { key: "water", label: "dark water", walkable: false },
-    8: { key: "chest", label: "locked chest", walkable: true }
-  };
+  const RENDER_LAYERS = ["Ground", "Walls", "Decor", "Objects"];
+  const TILESET_COLUMNS = 8;
   const MONSTERS = {
     cave_rat: { name: "Cave Rat", hp: 9, attack: 3, xp: 12, sprite: "monster_rat.svg" },
+    small_depths_rat: { name: "Depths Rat", hp: 11, attack: 3, xp: 14, sprite: "monster_rat.svg" },
+    slime_rat: { name: "Slime Rat", hp: 16, attack: 4, xp: 20, sprite: "monster_slime.svg" },
+    mire_wisp: { name: "Mire Wisp", hp: 20, attack: 5, xp: 26, sprite: "monster_wraith.svg" },
     goblin_scout: { name: "Goblin Scout", hp: 14, attack: 4, xp: 18, sprite: "monster_goblin.svg" },
     ash_orc: { name: "Ash Orc", hp: 22, attack: 6, xp: 32, sprite: "monster_orc.svg" },
     ember_slime: { name: "Ember Slime", hp: 18, attack: 5, xp: 24, sprite: "monster_slime.svg" },
@@ -29,8 +23,11 @@
     map: null,
     monsters: [],
     loot: [],
-    message: "Find the stairs. Survive the rooms. Bring back proof that the old city still has teeth.",
-    log: ["You descend into the buried halls beneath Visteria."],
+    doors: [],
+    npcs: [],
+    exits: [],
+    message: "Explore the Veyrindel depths. Find the stairs and survive what the map wakes up.",
+    log: ["You enter the Veyrindel depths."],
     hero: {
       x: 1,
       y: 1,
@@ -71,39 +68,56 @@
     const mapNode = xml.querySelector("map");
     const width = Number(mapNode.getAttribute("width"));
     const height = Number(mapNode.getAttribute("height"));
-    const terrainLayer = Array.from(xml.querySelectorAll("layer")).find((layer) => layer.getAttribute("name") === "terrain");
-    const terrain = terrainLayer.querySelector("data").textContent.trim().split(",").map((value) => Number(value.trim()) || 1);
+    const tileWidth = Number(mapNode.getAttribute("tilewidth")) || 16;
+    const tileHeight = Number(mapNode.getAttribute("tileheight")) || 16;
+    const imageNode = xml.querySelector("tileset image");
+    const tilesetImage = imageNode ? `${ASSET_BASE}/maps/${imageNode.getAttribute("source")}` : "";
+    const layers = {};
+    Array.from(xml.querySelectorAll("layer")).forEach((layer) => {
+      const name = layer.getAttribute("name") || "";
+      layers[name] = layer.querySelector("data").textContent.trim().split(",").map((value) => Number(value.trim()) || 0);
+    });
     const objects = Array.from(xml.querySelectorAll("objectgroup object")).map((object) => {
       const props = {};
       object.querySelectorAll("property").forEach((property) => {
         props[property.getAttribute("name")] = property.getAttribute("value");
       });
       return {
+        name: object.getAttribute("name") || "",
         type: object.getAttribute("type") || "",
-        x: Math.floor(Number(object.getAttribute("x")) / 16),
-        y: Math.floor(Number(object.getAttribute("y")) / 16),
+        x: Math.floor(Number(object.getAttribute("x")) / tileWidth),
+        y: Math.floor(Number(object.getAttribute("y")) / tileHeight),
         props
       };
     });
-    return { width, height, terrain, objects };
+    return { width, height, tileWidth, tileHeight, tilesetImage, layers, objects };
   }
 
   function applyMap(map) {
     state.map = map;
     state.monsters = [];
     state.loot = [];
+    state.doors = [];
+    state.npcs = [];
+    state.exits = [];
     map.objects.forEach((object) => {
-      if (object.type === "start") {
+      if (object.type === "spawn") {
         state.hero.x = object.x;
         state.hero.y = object.y;
       } else if (object.type === "monster") {
-        const base = MONSTERS[object.props.monster] || MONSTERS.cave_rat;
+        const base = MONSTERS[object.props.encounter] || MONSTERS[object.props.monster] || MONSTERS.cave_rat;
         state.monsters.push({ ...base, x: object.x, y: object.y, hp: base.hp, maxHp: base.hp });
       } else if (object.type === "loot") {
-        state.loot.push({ x: object.x, y: object.y, kind: object.props.kind || "gold", amount: Number(object.props.amount) || 1 });
+        state.loot.push({ x: object.x, y: object.y, name: object.name, kind: object.props.kind || object.props.loot_table || "cache", amount: Number(object.props.amount) || 1 });
+      } else if (object.type === "door") {
+        state.doors.push({ x: object.x, y: object.y, name: object.name, open: object.props.state === "open", blocks: object.props.blocks_movement !== "false" });
+      } else if (object.type === "npc") {
+        state.npcs.push({ x: object.x, y: object.y, name: object.name || "Warden Echo" });
+      } else if (object.type === "exit") {
+        state.exits.push({ x: object.x, y: object.y, name: object.name || "stairs_down" });
       }
     });
-    state.log.unshift(`Depth ${state.depth + 1}: ${map.width} x ${map.height} TMX map loaded.`);
+    state.log.unshift(`Veyrindel map loaded: ${map.width} x ${map.height}.`);
   }
 
   function render() {
@@ -114,19 +128,29 @@
     const cells = [];
     for (let y = 0; y < state.map.height; y += 1) {
       for (let x = 0; x < state.map.width; x += 1) {
-        const tile = TILE_INFO[state.map.terrain[y * state.map.width + x]] || TILE_INFO[1];
+        const index = y * state.map.width + x;
         const monster = state.monsters.find((candidate) => candidate.x === x && candidate.y === y && candidate.hp > 0);
         const loot = state.loot.find((item) => item.x === x && item.y === y);
+        const door = state.doors.find((item) => item.x === x && item.y === y && !item.open);
+        const npc = state.npcs.find((item) => item.x === x && item.y === y);
+        const exit = state.exits.find((item) => item.x === x && item.y === y);
         const hero = state.hero.x === x && state.hero.y === y;
-        let content = "";
+        const layerHtml = RENDER_LAYERS.map((layerName) => tileLayerHtml((state.map.layers[layerName] || [])[index])).join("");
+        let content = layerHtml;
         if (hero) {
-          content = `<img src="${ASSET_BASE}/sprites/${state.hero.sprite}" alt="hero">`;
+          content += `<img class="actor" src="${ASSET_BASE}/sprites/${state.hero.sprite}" alt="hero">`;
         } else if (monster) {
-          content = `<img src="${ASSET_BASE}/sprites/${monster.sprite}" alt="${escapeHtml(monster.name)}">`;
+          content += `<img class="actor" src="${ASSET_BASE}/sprites/${monster.sprite}" alt="${escapeHtml(monster.name)}">`;
         } else if (loot) {
-          content = `<span class="token">${loot.kind === "potion" ? "!" : "$"}</span>`;
+          content += `<span class="token">$</span>`;
+        } else if (door) {
+          content += `<span class="token">D</span>`;
+        } else if (npc) {
+          content += `<span class="token">?</span>`;
+        } else if (exit) {
+          content += `<span class="token">&gt;</span>`;
         }
-        cells.push(`<div class="tile tile-${tile.key}" title="${escapeHtml(tile.label)}">${content}</div>`);
+        cells.push(`<div class="tile">${content}</div>`);
       }
     }
     const monsterLine = state.monsters.filter((monster) => monster.hp > 0).map((monster) => `${monster.name} ${monster.hp}/${monster.maxHp}`).join(" | ") || "No monsters standing";
@@ -197,22 +221,36 @@
     }
     const x = state.hero.x + dx;
     const y = state.hero.y + dy;
-    const tile = TILE_INFO[state.map.terrain[y * state.map.width + x]] || TILE_INFO[2];
     const monster = state.monsters.find((candidate) => candidate.x === x && candidate.y === y && candidate.hp > 0);
+    const door = state.doors.find((candidate) => candidate.x === x && candidate.y === y && !candidate.open);
+    const npc = state.npcs.find((candidate) => candidate.x === x && candidate.y === y);
+    const exit = state.exits.find((candidate) => candidate.x === x && candidate.y === y);
     if (monster) {
       attackMonster(monster);
-    } else if (!tile.walkable) {
-      state.message = `The ${tile.label} blocks your path.`;
+    } else if (door && door.blocks) {
+      door.open = true;
+      door.blocks = false;
+      state.message = "You force the old door open.";
       state.log.unshift(state.message);
+    } else if (!isWalkable(x, y)) {
+      state.message = "The dungeon stone blocks your path.";
+      state.log.unshift(state.message);
+    } else if (npc) {
+      state.hero.x = x;
+      state.hero.y = y;
+      state.message = "The warden echo whispers: Veyrindel remembers every footstep.";
+      state.log.unshift(state.message);
+      monsterTurn();
+    } else if (exit) {
+      state.hero.x = x;
+      state.hero.y = y;
+      state.message = "You reach the stairs down. The next Veyrindel depth waits for a future map.";
+      state.log.unshift("Beta complete: Veyrindel depth cleared.");
     } else {
       state.hero.x = x;
       state.hero.y = y;
       collectLoot();
-      if (tile.key === "stairs") {
-        descend();
-        return;
-      }
-      state.message = `You step onto ${tile.label}.`;
+      state.message = "You move through the Veyrindel depths.";
       monsterTurn();
     }
     finishTurn();
@@ -255,10 +293,10 @@
     }
     const x = monster.x + dx;
     const y = monster.y + dy;
-    const tile = TILE_INFO[state.map.terrain[y * state.map.width + x]] || TILE_INFO[2];
+    const door = state.doors.find((candidate) => candidate.x === x && candidate.y === y && !candidate.open && candidate.blocks);
     const occupied = state.monsters.some((candidate) => candidate !== monster && candidate.hp > 0 && candidate.x === x && candidate.y === y);
     const heroThere = state.hero.x === x && state.hero.y === y;
-    if (!tile.walkable || occupied || heroThere) {
+    if (!isWalkable(x, y) || door || occupied || heroThere) {
       return false;
     }
     monster.x = x;
@@ -276,8 +314,8 @@
       state.hero.potions += 1;
       state.log.unshift("You pick up a red health potion.");
     } else {
-      state.hero.gold += loot.amount || 1;
-      state.log.unshift(`You collect ${loot.amount || 1} gold.`);
+      state.hero.gold += 6;
+      state.log.unshift(`You search ${loot.name || "a cache"} and find useful coin.`);
     }
   }
 
@@ -296,17 +334,6 @@
     finishTurn();
   }
 
-  function descend() {
-    if (state.depth + 1 >= MAPS.length) {
-      state.message = "You reach the sealed beta gate. The deeper dungeon waits for the next build.";
-      state.log.unshift("Beta complete: both TMX depths cleared.");
-      finishTurn();
-      return;
-    }
-    state.log.unshift("You take the stairs down.");
-    loadDepth(state.depth + 1);
-  }
-
   function finishTurn() {
     if (state.hero.hp <= 0) {
       state.message = "You fall in the dark. The beta dungeon claims another adventurer.";
@@ -318,9 +345,33 @@
   function restart() {
     state.depth = 0;
     state.hero = { x: 1, y: 1, hp: 34, maxHp: 34, attack: 7, defense: 1, xp: 0, gold: 0, potions: 1, sprite: "hero_visterian.svg" };
-    state.log = ["You descend into the buried halls beneath Visteria."];
-    state.message = "Find the stairs. Survive the rooms. Bring back proof that the old city still has teeth.";
+    state.log = ["You enter the Veyrindel depths."];
+    state.message = "Explore the Veyrindel depths. Find the stairs and survive what the map wakes up.";
     loadDepth(0);
+  }
+
+  function tileLayerHtml(gid) {
+    if (!gid) {
+      return "";
+    }
+    const index = gid - 1;
+    const col = index % TILESET_COLUMNS;
+    const row = Math.floor(index / TILESET_COLUMNS);
+    return `<span class="tile-layer" style="background-image:url('${state.map.tilesetImage}');background-position:calc(-${col} * var(--tile-size)) calc(-${row} * var(--tile-size));"></span>`;
+  }
+
+  function isWalkable(x, y) {
+    if (x < 0 || y < 0 || x >= state.map.width || y >= state.map.height) {
+      return false;
+    }
+    const index = y * state.map.width + x;
+    const ground = (state.map.layers.Ground || [])[index] || 0;
+    const collision = (state.map.layers.Collision || [])[index] || 0;
+    const openDoor = state.doors.some((door) => door.x === x && door.y === y && door.open);
+    if (openDoor) {
+      return ground > 0;
+    }
+    return ground > 0 && collision === 0;
   }
 
   function rollDie(sides) {
