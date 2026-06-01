@@ -681,14 +681,17 @@ select {
 
   .meta-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(120px, 160px) auto auto;
-    gap: 8px;
+    grid-template-columns: minmax(92px, 1fr) minmax(84px, auto) minmax(72px, 110px) auto auto;
+    align-items: stretch;
+    gap: 6px;
     overflow: visible;
   }
 
   .music-volume-control {
+    min-height: 40px;
     min-width: 0;
-    padding: 5px 8px;
+    justify-content: center;
+    padding: 5px 6px;
   }
 
   .music-volume-control span {
@@ -696,7 +699,7 @@ select {
   }
 
   .music-volume-control input {
-    width: 100%;
+    width: min(100%, 96px);
   }
 
   .account-menu {
@@ -707,7 +710,8 @@ select {
     width: 100%;
     min-width: 0;
     min-height: 40px;
-    padding: 8px 10px;
+    padding: 8px;
+    font-size: clamp(14px, 3.6vw, 16px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -716,8 +720,13 @@ select {
   .utility-button,
   .mobile-info-menu summary {
     min-height: 40px;
-    padding: 8px 10px;
+    padding: 8px;
+    font-size: clamp(14px, 3.6vw, 16px);
     white-space: nowrap;
+  }
+
+  .account-menu[open] summary {
+    border-color: var(--muted);
   }
 
   .mobile-info-menu {
@@ -726,12 +735,30 @@ select {
 
   .account-menu-panel {
     position: fixed;
-    top: 92px;
-    right: 10px;
-    left: 10px;
-    max-height: min(70svh, 430px);
+    top: 104px;
+    right: 8px;
+    left: 8px;
+    z-index: 70;
+    max-height: min(62svh, 420px);
     min-width: 0;
     overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .account-language-link {
+    display: grid;
+    min-height: 40px;
+    place-items: center;
+  }
+
+  .account-menu-panel button {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 16px;
+  }
+
+  .account-menu-panel button:disabled {
+    display: none;
   }
 
   .mobile-info-menu-panel {
@@ -803,6 +830,25 @@ select {
 }
 
 @media (max-width: 540px) {
+  .topbar {
+    padding-inline: 8px;
+  }
+
+  .meta-row {
+    grid-template-columns: minmax(84px, 1fr) minmax(78px, auto) minmax(58px, 76px) auto auto;
+    gap: 5px;
+  }
+
+  .music-volume-control input {
+    width: 64px;
+  }
+
+  .account-menu summary,
+  .utility-button,
+  .mobile-info-menu summary {
+    padding-inline: 6px;
+  }
+
   .choices {
     grid-template-columns: 1fr;
   }
