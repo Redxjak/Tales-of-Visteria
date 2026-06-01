@@ -3885,7 +3885,8 @@
         state.player.flags.warehouseStage = "leader_defeated";
         unlock("cult_breaker");
         silverMaskChoice();
-      }
+      },
+      onRun: warehouseRunCaught
     });
   }
 
