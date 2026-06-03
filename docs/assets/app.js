@@ -1980,7 +1980,10 @@
         hasSilverMask: false,
         wearingSilverMask: false,
         maskPowerClaimed: false,
+        maskPowerActive: false,
         playerSuccumbedToMask: false,
+        combatEscapes: 0,
+        escapedCombatTypes: [],
         magistoneOrbSpent: false,
         crownDestroyed: false,
         dollDestroyed: false,
@@ -2096,7 +2099,10 @@
       hasSilverMask: false,
       wearingSilverMask: false,
       maskPowerClaimed: false,
+      maskPowerActive: false,
       playerSuccumbedToMask: false,
+      combatEscapes: 0,
+      escapedCombatTypes: [],
       magistoneOrbSpent: false,
       crownDestroyed: false,
       dollDestroyed: false,
@@ -2458,12 +2464,14 @@
     writeKey("story.dm_silver_mask_choice");
     setChoices([
       choice(t("choice.dm_leave_mask"), () => {
+        removeSilverMaskPower();
         state.player.flags.hasSilverMask = false;
         state.player.flags.wearingSilverMask = false;
         writeKey("story.dm_silver_mask_left");
         dmRitualSurge();
       }),
       choice(t("choice.dm_store_mask"), () => {
+        removeSilverMaskPower();
         state.player.flags.hasSilverMask = true;
         state.player.flags.wearingSilverMask = false;
         addItem("silver mask");
@@ -2916,6 +2924,7 @@
     state.player.flags.orderObservedPlayer = true;
     writeKey("story.dm_order_throne_room_arrival");
     if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
+      removeSilverMaskPower();
       state.player.flags.hasSilverMask = false;
       removeItem("silver mask");
       writeKey("story.dm_order_destroys_stored_mask");
@@ -3703,7 +3712,8 @@
     startCombat(["orc", "orc", "orc", "orc"], "story.bridge_orc_fight_defeated", {
       attackersPerRound: 2,
       deathReason: "combat",
-      onWin: bridgeNavigationStart
+      onWin: bridgeNavigationStart,
+      onRun: bridgeRunToTraps
     });
   }
 
@@ -3722,8 +3732,14 @@
     startCombat(["orc", "goblin", "goblin"], "story.bridge_patrol_defeated", {
       attackersPerRound: 2,
       deathReason: "combat",
-      onWin: bridgeNavigationStart
+      onWin: bridgeNavigationStart,
+      onRun: bridgeRunToTraps
     });
+  }
+
+  function bridgeRunToTraps() {
+    writeKey("story.bridge_run_to_traps");
+    bridgeNavigationStart();
   }
 
   function bridgeNavigationStart() {
@@ -3910,6 +3926,7 @@
   }
 
   function leaveSilverMask() {
+    removeSilverMaskPower();
     state.player.flags.hasSilverMask = false;
     state.player.flags.wearingSilverMask = false;
     state.player.flags.warehouseStage = "mask_resolved";
@@ -3918,6 +3935,7 @@
   }
 
   function storeSilverMask() {
+    removeSilverMaskPower();
     state.player.flags.hasSilverMask = true;
     state.player.flags.wearingSilverMask = false;
     state.player.flags.warehouseStage = "mask_resolved";
@@ -3939,12 +3957,31 @@
   function applySilverMaskPower() {
     state.player.flags.maskCorruption = Math.max(state.player.flags.maskCorruption || 0, 1);
     unlock("mask_on");
-    if (!state.player.flags.maskPowerClaimed) {
+    if (!state.player.flags.maskPowerActive) {
       state.player.maxHealth += 6;
       state.player.health += 6;
       state.player.upgrades.damage += 3;
+      state.player.flags.maskPowerActive = true;
       state.player.flags.maskPowerClaimed = true;
     }
+  }
+
+  function increaseMaskCorruption(amount = 1) {
+    if (!state.player || !state.player.flags || !state.player.flags.wearingSilverMask) {
+      return;
+    }
+    state.player.flags.maskCorruption = Math.max(1, (state.player.flags.maskCorruption || 0) + amount);
+    writeKey("story.mask_corruption_deepens", { corruption: state.player.flags.maskCorruption });
+  }
+
+  function removeSilverMaskPower() {
+    if (!state.player || !state.player.flags || !state.player.flags.maskPowerActive) {
+      return;
+    }
+    state.player.maxHealth = Math.max(1, state.player.maxHealth - 6);
+    state.player.health = Math.min(state.player.health, state.player.maxHealth);
+    state.player.upgrades.damage = Math.max(0, (state.player.upgrades.damage || 0) - 3);
+    state.player.flags.maskPowerActive = false;
   }
 
   function warehouseAfterMask() {
@@ -3976,9 +4013,9 @@
     writeKey("story.false_hydra_interruption");
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.order_mask_warning");
-      state.player.flags.wearingSilverMask = false;
       state.player.flags.hasSilverMask = true;
       addItem("silver mask");
+      increaseMaskCorruption();
     }
     writeKey("story.order_arrival");
     state.player.flags.orderQuestionsAsked = [];
@@ -4099,6 +4136,7 @@
     state.player.flags.wearingSilverMask = true;
     state.player.flags.bridgeEndMaskResolved = true;
     applySilverMaskPower();
+    increaseMaskCorruption();
     if (hadClaimedMaskPower) {
       unlock("this_is_mine_now");
     }
@@ -4403,6 +4441,7 @@
   function castleMainGate() {
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.castle_main_gate_mask");
+      increaseMaskCorruption();
       setChoices([choice(t("choice.order_aside"), castleMainGateMaskSuccess)]);
       return;
     }
@@ -4544,6 +4583,7 @@
     writeKey("story.throne_room");
     if (state.player.flags.wearingSilverMask) {
       writeKey("story.throne_room_crown_temptation");
+      increaseMaskCorruption();
     }
     setChoices([choice(t("choice.approach_throne"), throneRoomApproach)]);
   }
@@ -4572,6 +4612,7 @@
     state.player.flags.wearingSilverMask = true;
     state.player.flags.playerSuccumbedToMask = true;
     applySilverMaskPower();
+    increaseMaskCorruption(2);
     unlock("this_is_mine_now");
     maskCorruptionEnding();
   }
@@ -4590,6 +4631,7 @@
       state.player.flags.playerSuccumbedToMask = false;
       state.player.flags.hasSilverMask = false;
       state.player.flags.wearingSilverMask = false;
+      removeSilverMaskPower();
       removeItem("silver mask");
       resistanceSummoning();
       return;
@@ -4598,6 +4640,7 @@
     state.player.flags.orderObservedPlayer = true;
     state.player.flags.hasSilverMask = false;
     state.player.flags.wearingSilverMask = false;
+    removeSilverMaskPower();
     removeItem("silver mask");
     writeKey("story.mask_corruption_release", { playerName: state.player.name });
     writeKey("story.mask_corruption_courtyard");
@@ -4682,6 +4725,7 @@
     state.player.flags.orderObservedPlayer = true;
     writeKey("story.order_throne_room_arrival");
     if (state.player.flags.hasSilverMask && !state.player.flags.wearingSilverMask) {
+      removeSilverMaskPower();
       state.player.flags.hasSilverMask = false;
       removeItem("silver mask");
       writeKey("story.order_destroys_stored_mask");
@@ -4983,7 +5027,7 @@
       return;
     }
     if (state.player.class === "ranger" && useClassSave("Ren vanishes into the chaos before the enemy can close the gap. Once per run, Run succeeds automatically.")) {
-      writeKey("story.combat_run_success");
+      handleCombatRunSuccess();
       const onRun = state.combat.onRun;
       state.combat = null;
       restoreChapterMusic();
@@ -4996,7 +5040,7 @@
     }
     const roll = rollD20("sneak");
     if (roll >= 12) {
-      writeKey("story.combat_run_success");
+      handleCombatRunSuccess();
       const onRun = state.combat.onRun;
       state.combat = null;
       restoreChapterMusic();
@@ -5012,6 +5056,18 @@
         showCombatChoices();
       }
     }
+  }
+
+  function handleCombatRunSuccess() {
+    writeKey("story.combat_run_success");
+    const flags = state.player.flags;
+    flags.combatEscapes = (flags.combatEscapes || 0) + 1;
+    const escapedTypes = new Set(Array.isArray(flags.escapedCombatTypes) ? flags.escapedCombatTypes : []);
+    (state.combat.enemies || [])
+      .filter((enemy) => enemy.hp > 0)
+      .forEach((enemy) => escapedTypes.add(enemy.type || enemy.name));
+    flags.escapedCombatTypes = [...escapedTypes];
+    writeKey("story.combat_run_consequence");
   }
 
   function drinkPotion() {
@@ -6088,6 +6144,12 @@
     if (state.player.flags.maskPowerClaimed === undefined) {
       state.player.flags.maskPowerClaimed = state.player.flags.wearingSilverMask;
     }
+    if (state.player.flags.maskPowerActive === undefined) {
+      state.player.flags.maskPowerActive = Boolean(state.player.flags.maskPowerClaimed);
+    }
+    if (!state.player.flags.wearingSilverMask && state.player.flags.maskPowerActive) {
+      removeSilverMaskPower();
+    }
     if (!state.player.flags.warehouseStage) {
       state.player.flags.warehouseStage = "not_started";
     }
@@ -6102,6 +6164,12 @@
     }
     if (state.player.flags.playerSuccumbedToMask === undefined) {
       state.player.flags.playerSuccumbedToMask = false;
+    }
+    if (state.player.flags.combatEscapes === undefined) {
+      state.player.flags.combatEscapes = 0;
+    }
+    if (!Array.isArray(state.player.flags.escapedCombatTypes)) {
+      state.player.flags.escapedCombatTypes = [];
     }
     if (state.player.flags.magistoneOrbSpent === undefined) {
       state.player.flags.magistoneOrbSpent = false;
