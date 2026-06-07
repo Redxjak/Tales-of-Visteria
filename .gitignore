@@ -1,6 +1,7 @@
 .venv/
 .idea/
 .codex/
+.codex-remote-attachments/
 __pycache__/
 *.py[cod]
 
