@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.9.16";
+  const VERSION = "1.0";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
@@ -15,7 +15,7 @@
   const SUPABASE_KEY = "sb_publishable_pxMr-7kXAoQ9gz0mTTWLew_FAIRtAio";
   const CHANNEL_CONFIG = {
     live: {
-      storagePrefix: "tov.web.",
+      storagePrefix: "tov.web.1.0.",
       leaderboardTable: "leaderboard_scores",
       profileTable: "user_profiles",
       gameDataTable: "user_game_data",
@@ -140,7 +140,7 @@
       leaderboardHeader: "Leaderboard",
       leaderboardNormalHeader: "Normal",
       leaderboardCheaterHeader: "Cheaters",
-      leaderboardWarning: "Warning: leaderboards will be reset with the release of version 1.0. A special mention will be made for the top three players at that time. Max possible score in the current live version: 6,600.",
+      leaderboardWarning: "Version 1.0 has begun with fresh leaderboards, stats, and achievements. Top non-cheat beta scores are preserved in the credits.",
       leaderboardLine: "{rank}. {cheat_marker}{name} - {score} ({character})",
       promptCancel: "Cancel",
       promptContinue: "Continue",
@@ -219,7 +219,7 @@
       leaderboardHeader: "Clasificación",
       leaderboardNormalHeader: "Normal",
       leaderboardCheaterHeader: "Tramposos",
-      leaderboardWarning: "Aviso: la clasificación se reiniciará con el lanzamiento de la versión 1.0. Se hará una mención especial para los tres mejores jugadores en ese momento. Puntaje máximo posible en la versión en vivo actual: 6,600.",
+      leaderboardWarning: "La version 1.0 comenzo con clasificaciones, estadisticas y logros nuevos. Los mejores puntajes beta sin trampas se conservan en los creditos.",
       leaderboardLine: "{rank}. {cheat_marker}{name} - {score} ({character})",
       promptCancel: "Cancelar",
       promptContinue: "Continuar",
@@ -614,7 +614,6 @@
       warehouse_survived: "Was it a dream?",
       high_ac: "Can't touch this",
       big_damage: "Unlimited powa",
-      maxed_out: "Maxed out",
       all_day: "I can do this all day",
       map_goblin: "Map Goblin",
       wrong_turn_right_lesson: "Wrong Turn, Right Lesson",
@@ -661,7 +660,6 @@
       bridge_cleared: "Puente superado",
       high_ac: "No puedes tocar esto",
       big_damage: "Powa ilimitado",
-      maxed_out: "Al máximo",
       all_day: "Puedo hacer esto todo el día",
       map_goblin: "Goblin de mapas",
       wrong_turn_right_lesson: "Giro equivocado, lección correcta",
@@ -1472,7 +1470,6 @@
     if (state.player.cheats.exp && state.player.class !== "dm") {
       state.player.level = Math.max(state.player.level || BASE_LEVEL, 20);
       state.player.experience = Math.max(state.player.experience || 0, state.player.xpToNext || BASE_XP_TO_NEXT);
-      unlock("maxed_out");
     }
   }
 
@@ -1565,6 +1562,16 @@
       "The world of Visteria was created by MolarCapybara",
       "An adaptation made by Redxjak"
     ];
+    const betaScoresHeading = lang === "es" ? "Mejores puntajes beta" : "Top beta scores";
+    const betaScores = [
+      "1. Dreigan - 6,390",
+      "2. Gwaize - 5,235",
+      "3. Wazetax - 4,940"
+    ];
+    const specialMentionHeading = lang === "es" ? "Mencion especial" : "Special mention";
+    const specialMention = lang === "es"
+      ? "Gracias a Wazetax, Dreigan y Root por sus comentarios y sugerencias que ayudaron a dar forma al juego."
+      : "Special thanks to Wazetax, Dreigan, and Root for feedback and suggestions that helped shape the game.";
     const musicHeading = lang === "es" ? "Musica" : "Music";
     const licenseLabel = lang === "es" ? "Resumen de licencia de Pixabay" : "Pixabay license summary";
     const trackHtml = MUSIC_CREDITS.map((track) => `
@@ -1578,6 +1585,14 @@
         <h3>Tales of Visteria</h3>
         <p>${escapeHtml(intro)}</p>
         <p>${storyCredits.map((credit) => escapeHtml(credit)).join("<br>")}</p>
+      </article>
+      <article class="faq-entry">
+        <h3>${escapeHtml(betaScoresHeading)}</h3>
+        <p>${betaScores.map((score) => escapeHtml(score)).join("<br>")}</p>
+      </article>
+      <article class="faq-entry">
+        <h3>${escapeHtml(specialMentionHeading)}</h3>
+        <p>${escapeHtml(specialMention)}</p>
       </article>
       <article class="faq-entry">
         <h3>${escapeHtml(musicHeading)}</h3>
@@ -2005,6 +2020,7 @@
         rescuedWazetax: false,
         wazetaxHidden: false,
         wazetaxQuestionsAsked: [],
+        discoveredVeyrindelPortal: false,
         bridgeWrongTurns: 0,
         classSaveUsed: false,
         completedRecorded: false,
@@ -2124,6 +2140,7 @@
       rescuedWazetax: false,
       wazetaxHidden: false,
       wazetaxQuestionsAsked: [],
+      discoveredVeyrindelPortal: false,
       bridgeWrongTurns: 0,
       classSaveUsed: false,
       completedRecorded: false,
@@ -4738,14 +4755,56 @@
 
   function survivingRouteClosing() {
     writeKey("story.surviving_route_closing");
+    setChoices([choice(t("choice.talk_wazetax_portal"), wazetaxPortalDiscovery)]);
+  }
+
+  function wazetaxPortalDiscovery() {
+    writeKey("story.wazetax_portal_discovery");
+    setChoices([choice(t("choice.follow_wazetax_portal"), wazetaxPortalArch)]);
+  }
+
+  function wazetaxPortalArch() {
+    writeKey("story.wazetax_portal_arch");
+    setChoices([
+      choice(t("choice.enter_veyrindel_portal"), veyrindelPortalScore),
+      choice(t("choice.refuse_veyrindel_portal"), veyrindelPortalRefusal)
+    ]);
+  }
+
+  function veyrindelPortalRefusal() {
+    writeKey("story.veyrindel_portal_refusal");
     recordEnding();
-    writeCurrentScore();
+    writeFinalScore();
     saveGame();
     setChoices([
       choice(ui.submitScore, submitScore),
       choice(ui.leaderboard, showLeaderboard),
       currentStatusChoice(),
       choice(t("choice.main_menu"), showStart)
+    ]);
+  }
+
+  function veyrindelPortalScore() {
+    state.player.flags.discoveredVeyrindelPortal = true;
+    writeKey("story.veyrindel_portal_score");
+    recordEnding();
+    writeCurrentScore();
+    saveGame();
+    setChoices([
+      choice(ui.submitScore, submitScore),
+      choice(t("choice.continue_veyrindel_portal"), veyrindelPortalPlaceholder),
+      choice(ui.leaderboard, showLeaderboard),
+      currentStatusChoice(),
+      choice(t("choice.main_menu"), showStart)
+    ]);
+  }
+
+  function veyrindelPortalPlaceholder() {
+    writeKey("story.veyrindel_portal_placeholder");
+    setChoices([
+      currentStatusChoice(),
+      choice(t("choice.main_menu"), showStart),
+      choice(t("choice.save"), saveGame)
     ]);
   }
 
@@ -5268,9 +5327,6 @@
     if (combatStats().ac > 20) {
       unlock("high_ac");
     }
-    if (state.player.level >= 20) {
-      unlock("maxed_out");
-    }
   }
 
   function awardDecisionXp(reason) {
@@ -5290,9 +5346,6 @@
     while (state.player.experience >= state.player.xpToNext) {
       state.player.experience -= state.player.xpToNext;
       state.player.level += 1;
-      if (state.player.level >= 20) {
-        unlock("maxed_out");
-      }
       state.player.xpToNext = BASE_XP_TO_NEXT + Math.max(0, state.player.level - BASE_LEVEL) * XP_PER_LEVEL;
       state.player.maxHealth += 4;
       state.player.health += 4;
@@ -5605,6 +5658,15 @@
     write(`${t("story.current_score", { score: scoreDetails.total })}\n\n${t("story.score_breakdown_heading")}\n${scoreDetails.lines.join("\n")}`);
   }
 
+  function writeFinalScore() {
+    if (!state.player) {
+      return;
+    }
+    const achievementsUnlocked = Object.keys(state.stats._achievements || {}).filter((key) => state.stats._achievements[key]).length;
+    const scoreDetails = scoreBreakdown(achievementsUnlocked);
+    write(`${t("story.final_score", { score: scoreDetails.total })}\n\n${t("story.score_breakdown_heading")}\n${scoreDetails.lines.join("\n")}`);
+  }
+
   function gameOver() {
     setMusic("mystery", { volume: MUSIC_VOLUMES.low });
     clearLevelRewardState();
@@ -5817,6 +5879,9 @@
     if (player.flags.completedRecorded) {
       addLine("score.current_ending", 1000);
     }
+    if (player.flags.discoveredVeyrindelPortal) {
+      addLine("score.veyrindel_portal", 500);
+    }
     if (player.flags.hasDoll) {
       addLine("score.cracked_doll", 100);
     }
@@ -5863,6 +5928,9 @@
     }
     if (flags.girlHelped) {
       pieces.push("ghost ally");
+    }
+    if (flags.discoveredVeyrindelPortal) {
+      pieces.push("Veyrindel portal");
     }
     return pieces.join(" | ");
   }
@@ -6227,6 +6295,9 @@
     }
     if (!Array.isArray(state.player.flags.wazetaxQuestionsAsked)) {
       state.player.flags.wazetaxQuestionsAsked = [];
+    }
+    if (state.player.flags.discoveredVeyrindelPortal === undefined) {
+      state.player.flags.discoveredVeyrindelPortal = false;
     }
     if (state.player.flags.bridgeXpAwarded === undefined) {
       state.player.flags.bridgeXpAwarded = false;

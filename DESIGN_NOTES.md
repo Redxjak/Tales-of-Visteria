@@ -142,7 +142,7 @@ Version 0.8.0 is now a browser game under `docs/`.
   - DM route can watch the ghost girl scene.
   - DM route can steer barracks or merchant district.
   - DM route can steer residential choices.
-  - DM route currently ends at the bridge summary and chapter-complete state.
+  - DM route continues through bridge, orc camps, Wazetax, castle, throne room, Order cleanup, and a compact Veyrindel portal tag.
 - Player route:
   - Caravan attack.
   - Fight or run.
@@ -229,4 +229,4 @@ Version 0.8.0 is now a browser game under `docs/`.
 - Final boss fight.
 - Treasure room.
 - Consequences for silver mask possession, use, and corruption.
-- More Jon the DM route coverage beyond the bridge summary.
+- Keep Jon the DM route aligned with major player-route story beats while preserving its behind-the-screen voice.

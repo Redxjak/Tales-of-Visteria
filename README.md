@@ -2,7 +2,7 @@
 
 A browser-based dark fantasy adventure.
 
-Current version: **0.9.16**
+Current version: **1.0**
 
 ## Community
 
@@ -36,7 +36,7 @@ For another language, copy `docs/assets/data/en.json` to a new file, keep the sa
 
 ## Online accounts and leaderboard
 
-Version 0.9.16 adds the `all` cheat code to enable every cheat at once. Version 0.9.15 separates normal and cheater leaderboard rows into side-by-side lists.
+Version 1.0 adds the Wazetax portal ending, preserves the top non-cheat beta scores in the credits, and starts fresh leaderboards, stats, achievements, and local browser save data. Version 0.9.16 added the `all` cheat code to enable every cheat at once. Version 0.9.15 separated normal and cheater leaderboard rows into side-by-side lists.
 
 Before using it live, run `supabase/leaderboard.sql` in the Supabase SQL editor for the project. The browser app uses the public Supabase URL and publishable key, so Row Level Security must stay enabled. Version 0.9.13 adds the `cheated` leaderboard column used for the `*CH` display marker.
 
