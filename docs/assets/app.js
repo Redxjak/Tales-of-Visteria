@@ -4,6 +4,7 @@
   const VERSION = "1.0";
   const ASSET_BASE = document.body.dataset.assetBase || "../assets";
   const DATA_ASSET_BASE = document.body.dataset.dataAssetBase || ASSET_BASE;
+  const VEYRINDEL_URL = "https://redxjak.github.io/Legends-of-Veyrindel/en/";
   const BRIDGE_DIRECTIONS = ["left", "up", "right", "down"];
   const BASE_LEVEL = 5;
   const BASE_XP_TO_NEXT = 100;
@@ -4792,20 +4793,17 @@
     saveGame();
     setChoices([
       choice(ui.submitScore, submitScore),
-      choice(t("choice.continue_veyrindel_portal"), veyrindelPortalPlaceholder),
+      choice(t("choice.continue_veyrindel_portal"), continueToVeyrindel),
       choice(ui.leaderboard, showLeaderboard),
       currentStatusChoice(),
       choice(t("choice.main_menu"), showStart)
     ]);
   }
 
-  function veyrindelPortalPlaceholder() {
+  function continueToVeyrindel() {
     writeKey("story.veyrindel_portal_placeholder");
-    setChoices([
-      currentStatusChoice(),
-      choice(t("choice.main_menu"), showStart),
-      choice(t("choice.save"), saveGame)
-    ]);
+    saveGame();
+    window.location.href = VEYRINDEL_URL;
   }
 
   function complete(clear = false) {
